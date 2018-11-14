@@ -59,7 +59,10 @@ LIBS=-lm -lpthread
 TARGET=$(LIB_DIR)/libagoo.a
 
 all: $(INC_DIR) $(LIB_DIR) $(TARGET)
-	rsync -tupRE $(HEADERS) $(INC_DIR)
+	rm -rf $(INC_DIR)/*
+	cp *.h $(INC_DIR)
+	mkdir $(INC_DIR)/agoo
+	cp -r agoo/*.h $(INC_DIR)/agoo
 
 clean:
 	$(RM) *.o
