@@ -520,6 +520,7 @@ log_catv(LogCat cat, const char *tid, const char *fmt, va_list ap) {
 		jwrite(&entry, stdout);
 	    }
 	    atomic_flag_clear(&the_log.push_lock);
+
 	    return;
 	}
 	// Wait for head to move on.

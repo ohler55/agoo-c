@@ -7,6 +7,8 @@
 #include "agoo/method.h"
 #include "agoo/req.h"
 
+#define AGOO_VERSION	"0.1.0"
+
 typedef struct _agooHeader {
     const char	*key;
     const char	*value;
