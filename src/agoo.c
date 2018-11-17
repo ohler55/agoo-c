@@ -29,8 +29,8 @@ agoo_init(const char *app_name) {
 }
 
 int
-agoo_bind_url(Err err, const char *url) {
-    Bind	b = bind_url(err, url);
+agoo_bind_url(agooErr err, const char *url) {
+    agooBind	b = bind_url(err, url);
 
     if (NULL == b) {
 	return err->code;
@@ -44,8 +44,8 @@ agoo_bind_url(Err err, const char *url) {
 }
 
 int
-agoo_bind_port(Err err, int port) {
-    Bind	b = bind_port(err, port);
+agoo_bind_port(agooErr err, int port) {
+    agooBind	b = bind_port(err, port);
 
     if (NULL == b) {
 	return err->code;
@@ -59,17 +59,17 @@ agoo_bind_port(Err err, int port) {
 }
 
 int
-agoo_add_func_hook(Err		err,
-		   Method	method,
+agoo_add_func_hook(agooErr		err,
+		   agooMethod	method,
 		   const char	*pattern,
-		   void		(*func)(Req req),
+		   void		(*func)(agooReq req),
 		   bool		quick) {
 
     return server_add_func_hook(err, method, pattern, func, &the_server.eval_queue, quick);
 }
 
 static void
-bad_request(Req req, int status, int line, const char *body) {
+bad_request(agooReq req, int status, int line, const char *body) {
     const char *msg = http_code_message(status);
     char	buf[1024];
     int		mlen = 0;
@@ -87,11 +87,11 @@ bad_request(Req req, int status, int line, const char *body) {
 
 static void*
 eval_loop(void *ptr) {
-    Req	req;
+    agooReq	req;
 
     atomic_fetch_add(&the_server.running, 1);
     while (the_server.active) {
-	if (NULL != (req = (Req)queue_pop(&the_server.eval_queue, 0.1))) {
+	if (NULL != (req = (agooReq)queue_pop(&the_server.eval_queue, 0.01))) {
 	    if (NULL == req->hook) {
 		bad_request(req, 404, __LINE__, NULL);
 		continue;
@@ -114,7 +114,7 @@ eval_loop(void *ptr) {
 }
 
 int
-agoo_start(Err err, const char *version) {
+agoo_start(agooErr err, const char *version) {
     pthread_t	*threads;
 
     if (NULL == (threads = (pthread_t*)malloc(sizeof(pthread_t) * the_server.thread_cnt))) {
@@ -153,9 +153,9 @@ agoo_shutdown(void (*stop)()) {
 }
 
 void
-agoo_respond(Req req, int status, const char *body, int blen, agooHeader headers) {
-    Text	t;
-    agooHeader	h;
+agoo_respond(agooReq req, int status, const char *body, int blen, agooKeyVal headers) {
+    agooText	t;
+    agooKeyVal	h;
     
     if (NULL == (t = text_allocate(1024))) {
 	// If out of memory for this then might as well exit.

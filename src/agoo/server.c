@@ -20,26 +20,35 @@
 
 #include "server.h"
 
-#define LOOP_UP		512
-#define MAX_LOOP	4
+#define LOOP_UP		100
 
-struct _Server	the_server = {false};
+struct _agooServer	the_server = {false};
 
 void
 server_setup() {
-    memset(&the_server, 0, sizeof(struct _Server));
+    long	i;
+    
+    memset(&the_server, 0, sizeof(struct _agooServer));
     pthread_mutex_init(&the_server.up_lock, 0);
     the_server.up_list = NULL;
     the_server.max_push_pending = 32;
     pages_init();
     queue_multi_init(&the_server.con_queue, 1024, false, true);
     queue_multi_init(&the_server.eval_queue, 1024, true, true);
+    the_server.loop_max = 4;
+    if (0 < (i = sysconf(_SC_NPROCESSORS_ONLN))) {
+	i /= 2;
+	if (0 >= i) {
+	    i = 1;
+	}
+	the_server.loop_max = (int)i;
+    }
 }
 
 static void
 add_con_loop() {
-    struct _Err	err = ERR_INIT;
-    ConLoop	loop = conloop_create(&err, 0);
+    struct _agooErr	err = ERR_INIT;
+    agooConLoop	loop = conloop_create(&err, 0);
 
     if (NULL != loop) {
 	loop->next = the_server.con_loops;
@@ -53,15 +62,15 @@ listen_loop(void *x) {
     int			optval = 1;
     struct pollfd	pa[100];
     struct pollfd	*p;
-    struct _Err		err = ERR_INIT;
+    struct _agooErr		err = ERR_INIT;
     struct sockaddr_in	client_addr;
     int			client_sock;
     int			pcnt = 0;
     socklen_t		alen = 0;
-    Con			con;
+    agooCon		con;
     int			i;
     uint64_t		cnt = 0;
-    Bind		b;
+    agooBind		b;
 
     // TBD support multiple sockets, count binds, allocate pollfd, setup
     //
@@ -109,7 +118,7 @@ listen_loop(void *x) {
 			    getpid(), (unsigned long long)cnt, b->id, con->sock);
 
 		    con_cnt = atomic_fetch_add(&the_server.con_cnt, 1);
-		    if (MAX_LOOP > the_server.loop_cnt && the_server.loop_cnt * LOOP_UP < con_cnt) {
+		    if (the_server.loop_max > the_server.loop_cnt && the_server.loop_cnt * LOOP_UP < con_cnt) {
 			add_con_loop();
 		    }
 		    queue_push(&the_server.con_queue, (void*)con);
@@ -135,22 +144,33 @@ listen_loop(void *x) {
 }
 
 int
-server_start(Err err, const char *app_name, const char *version) {
+server_start(agooErr err, const char *app_name, const char *version) {
     double	giveup;
     
     pthread_create(&the_server.listen_thread, NULL, listen_loop, NULL);
     the_server.con_loops = conloop_create(err, 0);
     the_server.loop_cnt = 1;
 
+    if (1 > the_server.thread_cnt) {
+	the_server.thread_cnt = 1;
+    }
+    // If the eval thread count is 1 that implies the eval load is low so
+    // might as well create the maximum number of con threads as is
+    // reasonable.
+    if (1 == the_server.thread_cnt) {
+	while (the_server.loop_cnt < the_server.loop_max) {
+	    add_con_loop();
+	}
+    }
     giveup = dtime() + 1.0;
     while (dtime() < giveup) {
-	if (2 <= atomic_load(&the_server.running)) {
+	if (2 <= (long)atomic_load(&the_server.running)) {
 	    break;
 	}
 	dsleep(0.01);
     }
     if (info_cat.on) {
-	Bind	b;
+	agooBind	b;
 	
 	for (b = the_server.binds; NULL != b; b = b->next) {
 	    log_cat(&info_cat, "%s %s with pid %d is listening on %s.", app_name, version, getpid(), b->id);
@@ -160,8 +180,8 @@ server_start(Err err, const char *app_name, const char *version) {
 }
 
 int
-setup_listen(Err err) {
-    Bind	b;
+setup_listen(agooErr err) {
+    agooBind	b;
 
     for (b = the_server.binds; NULL != b; b = b->next) {
 	if (ERR_OK != bind_listen(err, b)) {
@@ -176,7 +196,7 @@ setup_listen(Err err) {
 void
 server_shutdown(const char *app_name, void (*stop)()) {
     if (the_server.inited) {
-	ConLoop	loop;
+	agooConLoop	loop;
 
 	log_cat(&info_cat, "%s with pid %d shutting down.", app_name, getpid());
 	the_server.inited = false;
@@ -188,7 +208,7 @@ server_shutdown(const char *app_name, void (*stop)()) {
 	    for (loop = the_server.con_loops; NULL != loop; loop = loop->next) {
 		pthread_detach(loop->thread);
 	    }
-	    while (0 < atomic_load(&the_server.running)) {
+	    while (0 < (long)atomic_load(&the_server.running)) {
 		dsleep(0.1);
 		if (giveup < dtime()) {
 		    break;
@@ -198,14 +218,14 @@ server_shutdown(const char *app_name, void (*stop)()) {
 		stop();
 	    }
 	    while (NULL != the_server.hooks) {
-		Hook	h = the_server.hooks;
+		agooHook	h = the_server.hooks;
 
 		the_server.hooks = h->next;
 		hook_destroy(h);
 	    }
 	}
 	while (NULL != the_server.binds) {
-	    Bind	b = the_server.binds;
+	    agooBind	b = the_server.binds;
 
 	    the_server.binds = b->next;
 	    bind_destroy(b);
@@ -222,9 +242,9 @@ server_shutdown(const char *app_name, void (*stop)()) {
 }
 
 void
-server_bind(Bind b) {
+server_bind(agooBind b) {
     // If a bind with the same port already exists, replace it.
-    Bind	prev = NULL;
+    agooBind	prev = NULL;
 
     if (NULL == b->read) {
 	b->read = con_http_read;
@@ -235,7 +255,7 @@ server_bind(Bind b) {
     if (NULL == b->events) {
 	b->events = con_http_events;
     }
-    for (Bind bx = the_server.binds; NULL != bx; bx = bx->next) {
+    for (agooBind bx = the_server.binds; NULL != bx; bx = bx->next) {
 	if (bx->port == b->port) {
 	    b->next = bx->next;
 	    if (NULL == prev) {
@@ -253,7 +273,7 @@ server_bind(Bind b) {
 }
 
 void
-server_add_upgraded(Upgraded up) {
+server_add_upgraded(agooUpgraded up) {
     pthread_mutex_lock(&the_server.up_lock);
     if (NULL == the_server.up_list) {
 	up->next = NULL;
@@ -267,15 +287,15 @@ server_add_upgraded(Upgraded up) {
 }
 
 int
-server_add_func_hook(Err	err,
-		     Method	method,
+server_add_func_hook(agooErr	err,
+		     agooMethod	method,
 		     const char	*pattern,
-		     void	(*func)(Req req),
-		     Queue	queue,
+		     void	(*func)(agooReq req),
+		     agooQueue	queue,
 		     bool	quick) {
-    Hook	h;
-    Hook	prev = NULL;
-    Hook	hook = hook_func_create(method, pattern, func, queue);
+    agooHook	h;
+    agooHook	prev = NULL;
+    agooHook	hook = hook_func_create(method, pattern, func, queue);
 
     if (NULL == hook) {
 	return err_set(err, ERR_MEMORY, "failed to allocate memory for HTTP server Hook.");
@@ -293,8 +313,8 @@ server_add_func_hook(Err	err,
 }
 
 void
-server_publish(struct _Pub *pub) {
-    ConLoop	loop;
+server_publish(struct _agooPub *pub) {
+    agooConLoop	loop;
 
     for (loop = the_server.con_loops; NULL != loop; loop = loop->next) {
 	if (NULL == loop->next) {

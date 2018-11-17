@@ -2,9 +2,9 @@ CC=cc
 CV=$(shell if [ `uname` = "Darwin" ]; then echo "c11"; elif [ `uname` = "Linux" ]; then echo "gnu11"; fi;)
 OS=$(shell echo `uname`)
 ifeq ($(build),release)
-	CFLAGS=-c -Wall -O3 -std=$(CV) -pedantic -D$(OS) -DOPO_TS
+	CFLAGS=-c -Wall -O3 -std=$(CV) -pedantic -D$(OS) -DOPO_TS -DHAVE_STDATOMIC_H
 else
-	CFLAGS=-c -Wall -g -Og -std=$(CV) -pedantic -D$(OS) -DOPO_TS
+	CFLAGS=-c -Wall -g -Og -std=$(CV) -pedantic -D$(OS) -DOPO_TS -DHAVE_STDATOMIC_H
 endif
 
 # Create first so SRCS get setup with the agoo files.
@@ -12,6 +12,7 @@ AGOO=agoo
 AGOO_SRC=../../agoo/ext/agoo
 ifeq "$(wildcard $(AGOO))" ""
 	DUMMY=$(shell mkdir -p $(AGOO) && \
+		cp $(AGOO_SRC)/atomic.h $(AGOO) &&\
 		cp $(AGOO_SRC)/base64.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/bind.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/con.[ch] $(AGOO) &&\
@@ -74,6 +75,7 @@ clean:
 refresh:
 	mkdir -p $(AGOO)
 	echo "all:\n	make -C ..\n" > agoo/Makefile
+	cp ../../agoo/ext/agoo/atomic.h $(AGOO)
 	cp ../../agoo/ext/agoo/base64.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/bind.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/con.[ch] $(AGOO)

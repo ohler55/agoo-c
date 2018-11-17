@@ -9,20 +9,20 @@
 #include <agoo/server.h>
 
 static void
-empty_handler(Req req) {
+empty_handler(agooReq req) {
     agoo_respond(req, 200, NULL, 0, NULL);
 }
 
 static int	user_off = 6;
 
 static void
-user_handler(Req req) {
+user_handler(agooReq req) {
     agoo_respond(req, 200, req->path.start + user_off, req->path.len - user_off, NULL);
 }
 
 int
 main(int argc, char **argv) {
-    struct _Err	err = ERR_INIT;
+    struct _agooErr	err = ERR_INIT;
     
     agoo_init("simple");
 
@@ -37,9 +37,9 @@ main(int argc, char **argv) {
 	return err.code;
     }
     // set up hooks or routes
-    if (ERR_OK != agoo_add_func_hook(&err, GET, "/", empty_handler, true) ||
-	ERR_OK != agoo_add_func_hook(&err, GET, "/user/*", user_handler, true) ||
-	ERR_OK != agoo_add_func_hook(&err, POST, "/user", empty_handler, true)) {
+    if (ERR_OK != agoo_add_func_hook(&err, AGOO_GET, "/", empty_handler, true) ||
+	ERR_OK != agoo_add_func_hook(&err, AGOO_GET, "/user/*", user_handler, true) ||
+	ERR_OK != agoo_add_func_hook(&err, AGOO_POST, "/user", empty_handler, true)) {
 	return err.code;
     }
     // start the server and wait for it to be shutdown
