@@ -16,9 +16,6 @@ agoo: all
 	make -C src agoo
 
 
-VERSION=$(shell bin/opod --version | cut -d ' ' -f 3)
-OS=$(shell if [ `uname` = "Darwin" ]; then echo "osx-`sw_vers -productVersion`"; elif [ `uname` = "Linux" ]; then echo "ubuntu-`lsb_release -rs`"; fi;)
-
 pull:
 	cd ../agoo && git pull
 	git pull

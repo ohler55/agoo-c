@@ -21,13 +21,14 @@ typedef enum {
     // NON_NULL
 } gqlKind;
 
-struct _gqlType;
-struct _gqlValue;
-struct _gqlLink;
-struct _gqlField;
+struct _agooCon;
 struct _agooReq;
 struct _gqlDirUse;
+struct _gqlField;
 struct _gqlLink;
+struct _gqlLink;
+struct _gqlType;
+struct _gqlValue;
 
 // Used for references to implemenation entities.
 typedef void*	gqlRef;

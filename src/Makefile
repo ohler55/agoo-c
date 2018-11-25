@@ -31,6 +31,7 @@ ifeq "$(wildcard $(AGOO))" ""
 		cp $(AGOO_SRC)/page.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/pub.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/queue.[ch] $(AGOO) &&\
+		cp $(AGOO_SRC)/ready.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/req.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/res.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/respponse.[ch] $(AGOO) &&\
@@ -94,6 +95,7 @@ refresh:
 	cp ../../agoo/ext/agoo/page.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/pub.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/queue.[ch] $(AGOO)
+	cp ../../agoo/ext/agoo/ready.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/req.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/res.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/response.[ch] $(AGOO)
