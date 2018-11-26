@@ -1,6 +1,6 @@
 # CHANGELOG
 
-### 0.2.0 - 2018-11-25
+### 0.3.0 - 2018-11-25
 
 Better thread management and library naming cleanup.
 
