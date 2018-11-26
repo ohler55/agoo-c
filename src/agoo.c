@@ -22,11 +22,15 @@ sig_handler(int sig) {
     running = false;
 }
 
-void
-agoo_init(const char *app_name) {
+int
+agoo_init(agooErr err, const char *app_name) {
     agoo_log_init(app_name);
-    agoo_log_start(false);
+    if (AGOO_ERR_OK != agoo_log_start(err, false)) {
+	return err->code;
+    }
     agoo_server_setup();
+
+    return AGOO_ERR_OK;
 }
 
 int

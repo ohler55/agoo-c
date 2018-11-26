@@ -34,8 +34,10 @@ main(int argc, char **argv) {
     struct _agooErr	err = AGOO_ERR_INIT;
     int			port = 6464;
 
-    agoo_init("simple");
-
+    if (AGOO_ERR_OK != agoo_init(&err, "simple")) {
+	printf("Failed to initialize Agoo. %s\n", err.msg);
+	return err.code;
+    }
     // Set the number of eval threads.
     agoo_server.thread_cnt = 1;
 

@@ -17,7 +17,7 @@ typedef struct _agooKeyVal {
     const char	*value;
 } *agooKeyVal;
 
-extern void	agoo_init(const char *app_name);
+extern int	agoo_init(agooErr err, const char *app_name);
 
 extern int	agoo_bind_to_url(agooErr err, const char *url);
 extern int	agoo_bind_to_port(agooErr err, int port);
