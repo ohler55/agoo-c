@@ -26,21 +26,21 @@
 // When head == tail the queue is full. This happens when tail catches up with head.
 // 
 
-void
-agoo_queue_init(agooQueue q, size_t qsize) {
-    agoo_queue_multi_init(q, qsize, false, false);
+int
+agoo_queue_init(agooErr err, agooQueue q, size_t qsize) {
+    return agoo_queue_multi_init(err, q, qsize, false, false);
 }
 
-void
-agoo_queue_multi_init(agooQueue q, size_t qsize, bool multi_push, bool multi_pop) {
+int
+agoo_queue_multi_init(agooErr err, agooQueue q, size_t qsize, bool multi_push, bool multi_pop) {
     if (qsize < 4) {
 	qsize = 4;
     }
-    q->q = (agooQItem*)malloc(sizeof(agooQItem) * qsize);
-    DEBUG_ALLOC(mem_qitem, q->q)
+    if (NULL == (q->q = (agooQItem*)AGOO_CALLOC(qsize, sizeof(agooQItem)))) {
+	return AGOO_ERR_MEM(err, "Queue");
+    }
     q->end = q->q + qsize;
 
-    memset(q->q, 0, sizeof(agooQItem) * qsize);
     atomic_init(&q->head, q->q);
     atomic_init(&q->tail, q->q + 1);
     agoo_atomic_flag_init(&q->push_lock);
@@ -51,12 +51,13 @@ agoo_queue_multi_init(agooQueue q, size_t qsize, bool multi_push, bool multi_pop
     // Create when/if needed.
     q->rsock = 0;
     q->wsock = 0;
+
+    return AGOO_ERR_OK;
 }
 
 void
 agoo_queue_cleanup(agooQueue q) {
-    DEBUG_FREE(mem_qitem, q->q)
-    free(q->q);
+    AGOO_FREE(q->q);
     q->q = NULL;
     q->end = NULL;
     if (0 < q->wsock) {

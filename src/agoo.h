@@ -8,7 +8,7 @@
 #include "agoo/req.h"
 #include "agoo/text.h"
 
-#define AGOO_VERSION	"0.3.0"
+#define AGOO_VERSION	"0.4.0"
 
 struct _agooCon;
 

@@ -32,8 +32,7 @@ destroy(agooUpgraded up) {
 	up->subjects = up->subjects->next;
 	agoo_subject_destroy(subject);
     }
-    DEBUG_FREE(mem_upgraded, up);
-    free(up);
+    AGOO_FREE(up);
 }
 
 void
@@ -56,7 +55,7 @@ agoo_upgraded_release_con(agooUpgraded up) {
 }
 
 // Called from the con_loop thread, no need to lock, this steals the subject
-// so the pub subject should set to NULL
+// so the pub subject should be set to NULL
 void
 agoo_upgraded_add_subject(agooUpgraded up, agooSubject subject) {
     agooSubject	s;
@@ -167,11 +166,9 @@ agoo_upgraded_pending(agooUpgraded up) {
 
 agooUpgraded
 agoo_upgraded_create(agooCon c, void * ctx, void *env) {
-    agooUpgraded	up = (agooUpgraded)malloc(sizeof(struct _agooUpgraded));
+    agooUpgraded	up = (agooUpgraded)AGOO_CALLOC(1, sizeof(struct _agooUpgraded));
 
     if (NULL != up) {
-	DEBUG_ALLOC(mem_upgraded, up);
-	memset(up, 0, sizeof(struct _agooUpgraded));
 	up->con = c;
 	up->ctx = ctx;
 	up->env = env;
