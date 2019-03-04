@@ -43,5 +43,7 @@ extern void		agoo_req_destroy(agooReq req);
 extern const char*	agoo_req_host(agooReq r, int *lenp);
 extern int		agoo_req_port(agooReq r);
 extern const char*	agoo_req_query_value(agooReq r, const char *key, int klen, int *vlenp);
+extern int		agoo_req_query_decode(char *s, int len);
+const char*		agoo_req_header_value(agooReq req, const char *key, int *vlen);
 
 #endif // AGOO_REQ_H

@@ -13,6 +13,7 @@
 #include <poll.h>
 #endif
 
+#include "debug.h"
 #include "dtime.h"
 #include "log.h"
 #include "ready.h"
@@ -55,10 +56,10 @@ struct _agooReady {
 static Link
 link_create(agooErr err, int fd, void *ctx, agooHandler handler) {
     // TBD use block allocator
-    Link	link = (Link)malloc(sizeof(struct _link));
+    Link	link = (Link)AGOO_MALLOC(sizeof(struct _link));
 
     if (NULL == link) {
-	agoo_err_set(err, AGOO_ERR_MEMORY, "Failed to allocate memory for a connection link.");
+	AGOO_ERR_MEM(err, "Connection Link");
     } else {
 	//DEBUG_ALLOC(mem_???, c);
 	link->next = NULL;
@@ -72,10 +73,10 @@ link_create(agooErr err, int fd, void *ctx, agooHandler handler) {
 
 agooReady
 agoo_ready_create(agooErr err) {
-    agooReady	ready = (agooReady)malloc(sizeof(struct _agooReady));
+    agooReady	ready = (agooReady)AGOO_MALLOC(sizeof(struct _agooReady));
 
     if (NULL == ready) {
-	agoo_err_set(err, AGOO_ERR_MEMORY, "Failed to allocate memory for a connection manager.");
+	AGOO_ERR_MEM(err, "Connection Manager");
     } else {
 	//DEBUG_ALLOC(mem_???, c);
 	ready->links = NULL;
@@ -90,7 +91,7 @@ agoo_ready_create(agooErr err) {
 	{
 	    size_t	size = sizeof(struct pollfd) * INITIAL_POLL_SIZE;
 
-	    ready->pa = (struct pollfd*)malloc(size);
+	    ready->pa = (struct pollfd*)AGOO_MALLOC(size);
 	    ready->pend = ready->pa + INITIAL_POLL_SIZE;
 	    memset(ready->pa, 0, size);
 	}
@@ -108,14 +109,14 @@ agoo_ready_destroy(agooReady ready) {
 	if (NULL != link->handler->destroy) {
 	    link->handler->destroy(link->ctx);
 	}
-	free(link);
+	AGOO_FREE(link);
     }
 #if HAVE_SYS_EPOLL_H
     close(ready->epoll_fd);
 #else
-    free(ready->pa);
+    AGOO_FREE(ready->pa);
 #endif
-    free(ready);
+    AGOO_FREE(ready);
 }
 
 int
@@ -125,7 +126,7 @@ agoo_ready_add(agooErr		err,
 	       agooHandler	handler,
 	       void		*ctx) {
     Link	link;
-    
+
     if (NULL == (link = link_create(err, fd, ctx, handler))) {
 	return err->code;
     }
@@ -154,9 +155,9 @@ agoo_ready_add(agooErr		err,
     if (ready->pend - ready->pa <= ready->lcnt) {
 	size_t	cnt = (ready->pend - ready->pa) * 2;
 	size_t	size = cnt * sizeof(struct pollfd);
-	
-	if (NULL == (ready->pa = (struct pollfd*)realloc(ready->pa, size))) {
-	    agoo_err_set(err, AGOO_ERR_MEMORY, "Failed to allocate memory for a connection pool.");
+
+	if (NULL == (ready->pa = (struct pollfd*)AGOO_REALLOC(ready->pa, size))) {
+	    AGOO_ERR_MEM(err, "Connection Pool");
 	    agoo_log_cat(&agoo_error_cat, "Out of memory.");
 	    agoo_log_close();
 	    exit(EXIT_FAILURE);
@@ -196,8 +197,7 @@ ready_remove(agooReady ready, Link link) {
     if (NULL != link->handler->destroy) {
 	link->handler->destroy(link->ctx);
     }
-    //DEBUG_FREE(mem_???, c);
-    free(link);
+    AGOO_FREE(link);
     ready->lcnt--;
 }
 
@@ -206,7 +206,7 @@ agoo_ready_go(agooErr err, agooReady ready) {
     double	now;
     Link	link;
     Link	next;
-    
+
 #if HAVE_SYS_EPOLL_H
     struct epoll_event	events[EPOLL_SIZE];
     struct epoll_event	*ep;
@@ -271,7 +271,7 @@ agoo_ready_go(agooErr err, agooReady ready) {
 #else
     struct pollfd	*pp;
     int			i;
-    
+
     // Setup the poll events.
     for (link = ready->links, pp = ready->pa; NULL != link; link = link->next, pp++) {
 	pp->fd = link->fd;
@@ -290,6 +290,7 @@ agoo_ready_go(agooErr err, agooReady ready) {
 	case AGOO_READY_NONE:
 	default:
 	    // ignore, either dead or closing
+	    link->pp = NULL;
 	    pp--;
 	    break;
 	}

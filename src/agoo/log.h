@@ -105,7 +105,7 @@ extern struct _agooLogCat	agoo_resp_cat;
 extern struct _agooLogCat	agoo_eval_cat;
 extern struct _agooLogCat	agoo_push_cat;
 
-extern void		agoo_log_init(const char *app);
+extern int		agoo_log_init(agooErr err, const char *app);
 extern void		agoo_log_open_file();
 
 extern void		agoo_log_close();
@@ -124,5 +124,6 @@ extern void		agoo_log_catv(agooLogCat cat, const char *tid, const char *fmt, va_
 extern int		agoo_log_start(agooErr err, bool with_pid);
 
 extern agooColor	find_color(const char *name);
+extern int64_t		agoo_now_nano();
 
 #endif /* AGOO_LOG_H */

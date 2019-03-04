@@ -48,8 +48,7 @@ typedef struct _agooServer {
     atomic_int			running;
 } *agooServer;
 
-extern struct _agooServer	agoo_server;
-extern void	agoo_server_setup();
+extern int	agoo_server_setup(agooErr err);
 extern void	agoo_server_shutdown(const char *app_name, void (*stop)());
 extern void	agoo_server_bind(agooBind b);
 
@@ -66,6 +65,8 @@ extern int	agoo_server_add_func_hook(agooErr	err,
 
 extern void	agoo_server_publish(struct _agooPub *pub);
 
-extern int	force_loop_max;
+extern struct _agooServer	agoo_server;
+
+extern double	agoo_io_loop_ratio;
 
 #endif // AGOO_SERVER_H

@@ -24,31 +24,31 @@
 
 struct _agooServer	agoo_server = {false};
 
-int	force_loop_max = 0;
+double	agoo_io_loop_ratio = 0.5;
 
-void
-agoo_server_setup() {
+int
+agoo_server_setup(agooErr err) {
     long	i;
 
     memset(&agoo_server, 0, sizeof(struct _agooServer));
     pthread_mutex_init(&agoo_server.up_lock, 0);
     agoo_server.up_list = NULL;
     agoo_server.max_push_pending = 32;
-    agoo_pages_init();
-    agoo_queue_multi_init(&agoo_server.con_queue, 1024, false, true);
-    agoo_queue_multi_init(&agoo_server.eval_queue, 1024, true, true);
-    if (0 < force_loop_max) {
-	agoo_server.loop_max = force_loop_max;
-    } else {
-	agoo_server.loop_max = 4;
-	if (0 < (i = sysconf(_SC_NPROCESSORS_ONLN))) {
-	    i /= 2;
-	    if (1 >= i) {
-		i = 1;
-	    }
-	    agoo_server.loop_max = (int)i;
-	}
+
+    if (AGOO_ERR_OK != agoo_pages_init(err) ||
+	AGOO_ERR_OK != agoo_queue_multi_init(err, &agoo_server.con_queue, 1024, false, true) ||
+	AGOO_ERR_OK != agoo_queue_multi_init(err, &agoo_server.eval_queue, 1024, true, true)) {
+	return err->code;
     }
+    agoo_server.loop_max = 4;
+    if (0 < (i = sysconf(_SC_NPROCESSORS_ONLN))) {
+	i = (int)(i * agoo_io_loop_ratio);
+	if (1 >= i) {
+	    i = 1;
+	}
+	agoo_server.loop_max = (int)i;
+    }
+    return AGOO_ERR_OK;
 }
 
 static void
@@ -78,8 +78,6 @@ listen_loop(void *x) {
     uint64_t		cnt = 0;
     agooBind		b;
 
-    // TBD support multiple sockets, count binds, allocate pollfd, setup
-    //
     for (b = agoo_server.binds, p = pa; NULL != b; b = b->next, p++, pcnt++) {
 	p->fd = b->fd;
 	p->events = POLLIN;
@@ -309,7 +307,7 @@ agoo_server_add_func_hook(agooErr	err,
     agooHook	hook = agoo_hook_func_create(method, pattern, func, queue);
 
     if (NULL == hook) {
-	return agoo_err_set(err, AGOO_ERR_MEMORY, "failed to allocate memory for HTTP server Hook.");
+	return AGOO_ERR_MEM(err, "HTTP Server Hook");
     }
     hook->no_queue = quick;
     for (h = agoo_server.hooks; NULL != h; h = h->next) {

@@ -15,18 +15,20 @@
 
 agooBind
 agoo_bind_port(agooErr err, int port) {
-    agooBind	b = (agooBind)malloc(sizeof(struct _agooBind));
+    agooBind	b = (agooBind)AGOO_CALLOC(1, sizeof(struct _agooBind));
 
     if (NULL != b) {
 	char	id[1024];
 	
-	DEBUG_ALLOC(mem_bind, b);
-	memset(b, 0, sizeof(struct _agooBind));
 	b->port = port;
 	b->family = AF_INET;
 	snprintf(id, sizeof(id) - 1, "http://:%d", port);
 	strcpy(b->scheme, "http");
-	b->id = strdup(id);
+	if (NULL == (b->id = AGOO_STRDUP(id))) {
+	    AGOO_ERR_MEM(err, "strdup()");
+	    AGOO_FREE(b);
+	    return NULL;
+	}
 	b->kind = AGOO_CON_HTTP;
 	b->read = NULL;
 	b->write = NULL;
@@ -60,17 +62,18 @@ url_tcp(agooErr err, const char *url, const char *scheme) {
 	}
 	port = atoi(colon + 1);
     }
-    if (NULL != (b = (agooBind)malloc(sizeof(struct _agooBind)))) {
+    if (NULL != (b = (agooBind)AGOO_CALLOC(1, sizeof(struct _agooBind)))) {
 	char	id[64];
-	
-	DEBUG_ALLOC(mem_bind, b);
-	memset(b, 0, sizeof(struct _agooBind));
 
 	b->port = port;
 	b->addr4 = addr;
 	b->family = AF_INET;
 	snprintf(id, sizeof(id), "%s://%s:%d", scheme, inet_ntoa(addr), port);
-	b->id = strdup(id);
+	if (NULL == (b->id = AGOO_STRDUP(id))) {
+	    AGOO_ERR_MEM(err, "strdup()");
+	    AGOO_FREE(b);
+	    return NULL;
+	}
 	strncpy(b->scheme, scheme, sizeof(b->scheme));
 	b->scheme[sizeof(b->scheme) - 1] = '\0';
 	b->kind = AGOO_CON_HTTP;
@@ -80,7 +83,7 @@ url_tcp(agooErr err, const char *url, const char *scheme) {
 
 	return b;
     }
-    agoo_err_set(err, AGOO_ERR_MEMORY, "Failed to allocate memory for a Bind.");
+    AGOO_ERR_MEM(err, "Bind");
     
     return b;
 }
@@ -103,17 +106,18 @@ url_tcp6(agooErr err, const char *url, const char *scheme) {
 	agoo_err_set(err, AGOO_ERR_ARG, "%s bind address is not valid. (%s)", scheme, url);
 	return NULL;
     }
-    if (NULL != (b = (agooBind)malloc(sizeof(struct _agooBind)))) {
+    if (NULL != (b = (agooBind)AGOO_CALLOC(1, sizeof(struct _agooBind)))) {
 	char	str[INET6_ADDRSTRLEN + 1];
-	
-	DEBUG_ALLOC(mem_bind, b);
-	memset(b, 0, sizeof(struct _agooBind));
 
 	b->port = port;
 	b->addr6 = addr;
 	b->family = AF_INET6;
 	snprintf(buf, sizeof(buf), "%s://[%s]:%d", scheme, inet_ntop(AF_INET6, &addr, str, INET6_ADDRSTRLEN), port);
-	b->id = strdup(buf);
+	if (NULL == (b->id = AGOO_STRDUP(buf))) {
+	    AGOO_ERR_MEM(err, "strdup()");
+	    AGOO_FREE(b);
+	    return NULL;
+	}	    
 	strncpy(b->scheme, scheme, sizeof(b->scheme));
 	b->scheme[sizeof(b->scheme) - 1] = '\0';
 	b->kind = AGOO_CON_HTTP;
@@ -123,7 +127,7 @@ url_tcp6(agooErr err, const char *url, const char *scheme) {
 
 	return b;
     }
-    agoo_err_set(err, AGOO_ERR_MEMORY, "Failed to allocate memory for a Bind.");
+    AGOO_ERR_MEM(err, "Bind");
     
     return b;
 }
@@ -134,17 +138,23 @@ url_named(agooErr err, const char *url) {
 	agoo_err_set(err, AGOO_ERR_ARG, "Named Unix sockets names must not be empty.");
 	return NULL;
     } else {
-	agooBind	b = (agooBind)malloc(sizeof(struct _agooBind));
+	agooBind	b = (agooBind)AGOO_CALLOC(1, sizeof(struct _agooBind));
 
 	if (NULL != b) {
 	    const char	*fmt = "unix://%s";
 	    char	id[1024];
 	
-	    DEBUG_ALLOC(mem_bind, b);
-	    memset(b, 0, sizeof(struct _agooBind));
-	    b->name = strdup(url);
+	    if (NULL == (b->name = AGOO_STRDUP(url))) {
+		AGOO_ERR_MEM(err, "strdup()");
+		AGOO_FREE(b);
+		return NULL;
+	    }
 	    snprintf(id, sizeof(id) - 1, fmt, url);
-	    b->id = strdup(id);
+	    if (NULL == (b->id = AGOO_STRDUP(id))) {
+		AGOO_ERR_MEM(err, "strdup()");
+		AGOO_FREE(b);
+		return NULL;
+	    }
 	    strcpy(b->scheme, "unix");
 	    b->kind = AGOO_CON_HTTP;
 	    b->read = NULL;
@@ -153,7 +163,7 @@ url_named(agooErr err, const char *url) {
 	}
 	return b;
     }
-    agoo_err_set(err, AGOO_ERR_MEMORY, "Failed to allocate memory for a Bind.");
+    AGOO_ERR_MEM(err, "Bind");
 
     return NULL;
 }
@@ -208,13 +218,12 @@ agoo_bind_url(agooErr err, const char *url) {
 
 void
 agoo_bind_destroy(agooBind b) {
-    DEBUG_FREE(mem_bind, b);
-    free(b->id);
-    free(b->name);
-    free(b->key);
-    free(b->cert);
-    free(b->ca);
-    free(b);
+    AGOO_FREE(b->id);
+    AGOO_FREE(b->name);
+    AGOO_FREE(b->key);
+    AGOO_FREE(b->cert);
+    AGOO_FREE(b->ca);
+    AGOO_FREE(b);
 }
 
 static int

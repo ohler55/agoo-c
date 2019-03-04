@@ -24,11 +24,11 @@ sig_handler(int sig) {
 
 int
 agoo_init(agooErr err, const char *app_name) {
-    agoo_log_init(app_name);
+    agoo_log_init(err, app_name);
     if (AGOO_ERR_OK != agoo_log_start(err, false)) {
 	return err->code;
     }
-    agoo_server_setup();
+    agoo_server_setup(err);
 
     return AGOO_ERR_OK;
 }
@@ -79,7 +79,7 @@ bad_request(agooReq req, int status, int line, const char *body) {
     char	buf[1024];
     int		mlen = 0;
     int		cnt;
-    
+
     if (NULL != body) {
 	mlen = strlen(body);
 	cnt = snprintf(buf, sizeof(buf), "HTTP/1.1 %d %s\r\nConnection: Close\r\nContent-Length: %d\r\n\r\n%s", status, msg, mlen, body);
@@ -137,7 +137,7 @@ agoo_start(agooErr err, const char *version) {
     }
     // TBD wait for threads to be started?
     // TBD is running reset?
-    
+
     agoo_server.inited = true;
     if (AGOO_ERR_OK != setup_listen(err) ||
 	AGOO_ERR_OK != agoo_server_start(err, agoo_log.app, version)) {
@@ -165,7 +165,7 @@ agooText
 agoo_respond(int status, const char *body, int blen, agooKeyVal headers) {
     agooText	t;
     agooKeyVal	h;
-    
+
     if (0 > blen) {
 	if (NULL == body) {
 	    blen = 0;
@@ -194,4 +194,3 @@ agoo_respond(int status, const char *body, int blen, agooKeyVal headers) {
     }
     return t;
 }
-

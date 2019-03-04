@@ -21,7 +21,10 @@ ifeq "$(wildcard $(AGOO))" ""
 		cp $(AGOO_SRC)/dtime.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/err.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/graphql.[ch] $(AGOO) &&\
+		cp $(AGOO_SRC)/gqlcobj.[ch] $(AGOO) &&\
+		cp $(AGOO_SRC)/gqleval.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/gqlintro.[ch] $(AGOO) &&\
+		cp $(AGOO_SRC)/gqljson.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/gqlvalue.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/hook.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/http.[ch] $(AGOO) &&\
@@ -36,6 +39,7 @@ ifeq "$(wildcard $(AGOO))" ""
 		cp $(AGOO_SRC)/res.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/respponse.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/sha1.[ch] $(AGOO) &&\
+		cp $(AGOO_SRC)/sectime.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/seg.h $(AGOO) &&\
 		cp $(AGOO_SRC)/server.[ch] $(AGOO) &&\
 		cp $(AGOO_SRC)/sdl.[ch] $(AGOO) &&\
@@ -85,7 +89,10 @@ refresh:
 	cp ../../agoo/ext/agoo/dtime.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/err.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/graphql.[ch] $(AGOO)
+	cp ../../agoo/ext/agoo/gqlcobj.[ch] $(AGOO)
+	cp ../../agoo/ext/agoo/gqleval.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/gqlintro.[ch] $(AGOO)
+	cp ../../agoo/ext/agoo/gqljson.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/gqlvalue.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/hook.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/http.[ch] $(AGOO)
@@ -100,6 +107,7 @@ refresh:
 	cp ../../agoo/ext/agoo/res.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/response.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/sha1.[ch] $(AGOO)
+	cp ../../agoo/ext/agoo/sectime.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/seg.h $(AGOO)
 	cp ../../agoo/ext/agoo/server.[ch] $(AGOO)
 	cp ../../agoo/ext/agoo/sdl.[ch] $(AGOO)
