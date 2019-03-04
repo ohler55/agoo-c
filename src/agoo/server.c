@@ -24,10 +24,12 @@
 
 struct _agooServer	agoo_server = {false};
 
+int	force_loop_max = 0;
+
 void
 agoo_server_setup() {
     long	i;
-    
+
     memset(&agoo_server, 0, sizeof(struct _agooServer));
     pthread_mutex_init(&agoo_server.up_lock, 0);
     agoo_server.up_list = NULL;
@@ -35,13 +37,17 @@ agoo_server_setup() {
     agoo_pages_init();
     agoo_queue_multi_init(&agoo_server.con_queue, 1024, false, true);
     agoo_queue_multi_init(&agoo_server.eval_queue, 1024, true, true);
-    agoo_server.loop_max = 4;
-    if (0 < (i = sysconf(_SC_NPROCESSORS_ONLN))) {
-	i /= 2;
-	if (1 >= i) {
-	    i = 1;
+    if (0 < force_loop_max) {
+	agoo_server.loop_max = force_loop_max;
+    } else {
+	agoo_server.loop_max = 4;
+	if (0 < (i = sysconf(_SC_NPROCESSORS_ONLN))) {
+	    i /= 2;
+	    if (1 >= i) {
+		i = 1;
+	    }
+	    agoo_server.loop_max = (int)i;
 	}
-	agoo_server.loop_max = (int)i;
     }
 }
 
@@ -148,7 +154,7 @@ agoo_server_start(agooErr err, const char *app_name, const char *version) {
     double	giveup;
     int		xcnt = 0;
     int		stat;
-    
+
     if (0 != (stat = pthread_create(&agoo_server.listen_thread, NULL, listen_loop, NULL))) {
 	return agoo_err_set(err, stat, "Failed to create server listener thread. %s", strerror(stat));
     }
@@ -156,7 +162,7 @@ agoo_server_start(agooErr err, const char *app_name, const char *version) {
     agoo_server.con_loops = agoo_conloop_create(err, 0);
     agoo_server.loop_cnt = 1;
     xcnt++;
-    
+
     // If the eval thread count is 1 that implies the eval load is low so
     // might as well create the maximum number of con threads as is
     // reasonable.
@@ -175,7 +181,7 @@ agoo_server_start(agooErr err, const char *app_name, const char *version) {
     }
     if (agoo_info_cat.on) {
 	agooBind	b;
-	
+
 	for (b = agoo_server.binds; NULL != b; b = b->next) {
 	    agoo_log_cat(&agoo_info_cat, "%s %s with pid %d is listening on %s.", app_name, version, getpid(), b->id);
 	}
@@ -206,7 +212,7 @@ agoo_server_shutdown(const char *app_name, void (*stop)()) {
 	agoo_server.inited = false;
 	if (agoo_server.active) {
 	    double	giveup = dtime() + 1.0;
-	    
+
 	    agoo_server.active = false;
 	    pthread_detach(agoo_server.listen_thread);
 	    for (loop = agoo_server.con_loops; NULL != loop; loop = loop->next) {
