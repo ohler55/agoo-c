@@ -1,5 +1,11 @@
 # CHANGELOG
 
+### 0.4.0 - 2019-03-05
+
+Merge in core changes.
+
+- Add `agoo_io_loop_ratio` for more control over IO threads.
+
 ### 0.3.0 - 2018-11-25
 
 Better thread management and library naming cleanup.

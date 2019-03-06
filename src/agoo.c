@@ -25,6 +25,7 @@ sig_handler(int sig) {
 int
 agoo_init(agooErr err, const char *app_name) {
     agoo_log_init(err, app_name);
+
     if (AGOO_ERR_OK != agoo_log_start(err, false) ||
 	AGOO_ERR_OK != agoo_server_setup(err)) {
 	return err->code;

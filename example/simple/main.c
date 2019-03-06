@@ -41,8 +41,10 @@ main(int argc, char **argv) {
     // Set the number of eval threads.
     agoo_server.thread_cnt = 1;
 
-    agoo_pages_set_root(".");
-
+    if (AGOO_ERR_OK != agoo_pages_set_root(&err, ".")) {
+	printf("Failed to set root. %s\n", err.msg);
+	return err.code;
+    }
     if (AGOO_ERR_OK != agoo_bind_to_port(&err, port)) {
 	printf("Failed to bind to port %d. %s\n", port, err.msg);
 	return err.code;
