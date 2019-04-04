@@ -14,6 +14,7 @@
 #include "agoo/req.h"
 #include "agoo/res.h"
 #include "agoo/server.h"
+#include "agoo/graphql.h"
 
 static volatile bool	running = true;
 
@@ -71,6 +72,23 @@ agoo_add_func_hook(agooErr	err,
 		   bool		quick) {
 
     return agoo_server_add_func_hook(err, method, pattern, func, &agoo_server.eval_queue, quick);
+}
+
+int
+agoo_setup_graphql(agooErr err, const char *path) {
+    char	schema_path[1024];
+
+    // TBD
+    if (AGOO_ERR_OK != gql_init(err)) {
+	return err->code;
+    }
+    snprintf(schema_path, sizeof(schema_path), "%s/schema", path);
+    if (AGOO_ERR_OK != agoo_server_add_func_hook(err, AGOO_GET, path, gql_eval_get_hook, &agoo_server.eval_queue, false) ||
+	AGOO_ERR_OK != agoo_server_add_func_hook(err, AGOO_POST, path, gql_eval_post_hook, &agoo_server.eval_queue, false) ||
+	AGOO_ERR_OK != agoo_server_add_func_hook(err, AGOO_GET, schema_path, gql_dump_hook, &agoo_server.eval_queue, false)) {
+	return err->code;
+    }
+    return AGOO_ERR_OK;
 }
 
 static void

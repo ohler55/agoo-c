@@ -32,5 +32,6 @@ extern int	agoo_start(agooErr err, const char *version);
 extern void	agoo_shutdown(void (*stop)());
 
 extern agooText	agoo_respond(int status, const char *body, int blen, agooKeyVal headers);
+extern int	agoo_setup_graphql(agooErr err, const char *path);
 
 #endif // AGOO_H
