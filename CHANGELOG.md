@@ -1,5 +1,11 @@
 # CHANGELOG
 
+### 0.5.0 - 2019-04-06
+
+GraphQL
+
+- Add GraphQL support and example.
+
 ### 0.4.0 - 2019-03-05
 
 Merge in core changes.
