@@ -9,12 +9,15 @@
 #include "agoo/bind.h"
 #include "agoo/con.h"
 #include "agoo/dtime.h"
+#include "agoo/gqlintro.h"
+#include "agoo/gqlvalue.h"
+#include "agoo/graphql.h"
 #include "agoo/http.h"
 #include "agoo/log.h"
 #include "agoo/req.h"
 #include "agoo/res.h"
+#include "agoo/sdl.h"
 #include "agoo/server.h"
-#include "agoo/graphql.h"
 
 static volatile bool	running = true;
 
@@ -74,11 +77,95 @@ agoo_add_func_hook(agooErr	err,
     return agoo_server_add_func_hook(err, method, pattern, func, &agoo_server.eval_queue, quick);
 }
 
+gqlRef	agoo_query_object = NULL;
+gqlRef	agoo_mutation_object = NULL;
+
+static int
+schema_query(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    struct _gqlCobj	child = { .clas = ((gqlCobj)agoo_query_object)->clas, .ptr = NULL };
+
+    return gql_eval_sels(err, doc, (gqlRef)&child, field, sel->sels, result, depth + 1);
+}
+
+static int
+schema_mutation(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    struct _gqlCobj	child = { .clas = ((gqlCobj)agoo_mutation_object)->clas, .ptr = NULL };
+
+    return gql_eval_sels(err, doc, (gqlRef)&child, field, sel->sels, result, depth + 1);
+}
+
+static struct _gqlCmethod	schema_methods[] = {
+    { .key = "query",    .func = schema_query },
+    { .key = "mutation", .func = schema_mutation },
+    { .key = NULL,       .func = NULL },
+};
+
+static struct _gqlCclass	schema_class = {
+    .name = "schema",
+    .methods = schema_methods,
+};
+
+static struct _gqlCobj	root_obj = {
+    .clas = &schema_class,
+    .ptr = NULL,
+};
+
+static gqlRef
+root_op(const char *op) {
+    gqlRef	ref = NULL;
+
+    if (0 == strcmp("query", op)) {
+	ref = agoo_query_object;
+    } else if (0 == strcmp("mutation", op)) {
+	ref = agoo_mutation_object;
+    }
+    return ref;
+}
+
+static int
+resolve(agooErr err, gqlDoc doc, gqlRef target, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    gqlCobj	obj = (gqlCobj)target;
+
+    if ('_' == *sel->name && '_' == sel->name[1]) {
+	if (0 == strcmp("__typename", sel->name)) {
+	    const char	*key = sel->name;
+
+	    if (NULL != sel->alias) {
+		key = sel->alias;
+	    }
+	    if (AGOO_ERR_OK != gql_set_typename(err, gql_cobj_ref_type(target), key, result)) {
+		return err->code;
+	    }
+	    return AGOO_ERR_OK;
+	}
+	switch (doc->op->kind) {
+	case GQL_QUERY:
+	    return gql_intro_eval(err, doc, sel, result, depth);
+	case GQL_MUTATION:
+	    return agoo_err_set(err, AGOO_ERR_EVAL, "%s can not be called on a mutation.", sel->name);
+	case GQL_SUBSCRIPTION:
+	    return agoo_err_set(err, AGOO_ERR_EVAL, "%s can not be called on a subscription.", sel->name);
+	default:
+	    return agoo_err_set(err, AGOO_ERR_EVAL, "Not a valid operation on the root object.");
+	}
+    }
+    gqlCmethod	method;
+
+    for (method = obj->clas->methods; NULL != method->key; method++) {
+	if (0 == strcmp(method->key, sel->name)) {
+	    return method->func(err, doc, obj, field, sel, result, depth);
+	}
+    }
+    return agoo_err_set(err, AGOO_ERR_EVAL, "%s is not a field on %s.", sel->name, obj->clas->name);
+}
+
 int
-agoo_setup_graphql(agooErr err, const char *path) {
+agoo_setup_graphql(agooErr err, const char *path, ...) {
+    va_list	ap;
+    const char	*sdl;
     char	schema_path[1024];
 
-    // TBD
+    va_start(ap, path);
     if (AGOO_ERR_OK != gql_init(err)) {
 	return err->code;
     }
@@ -88,6 +175,55 @@ agoo_setup_graphql(agooErr err, const char *path) {
 	AGOO_ERR_OK != agoo_server_add_func_hook(err, AGOO_GET, schema_path, gql_dump_hook, &agoo_server.eval_queue, false)) {
 	return err->code;
     }
+    gql_root = (gqlRef)&root_obj;
+
+    gql_doc_eval_func = NULL;
+    gql_resolve_func = resolve;
+    gql_type_func = gql_cobj_ref_type;
+    gql_root_op = root_op;
+
+    while (NULL != (sdl = va_arg(ap, const char*))) {
+	if (AGOO_ERR_OK != sdl_parse(err, sdl, -1)) {
+	    va_end(ap);
+	    return err->code;
+	}
+    }
+    va_end(ap);
+
+    gqlType	schema;
+    gqlType	query = NULL;
+    gqlType	mutation = NULL;
+
+    if (NULL == (schema = gql_type_get("schema"))) {
+	if (NULL == (schema = gql_schema_create(err, NULL, 0))) {
+	    return err->code;
+	}
+	if (NULL == (query = gql_type_get("Query"))) {
+	    return agoo_err_set(err, AGOO_ERR_NOT_FOUND, "Query type not defined.");
+	}
+	if (NULL == gql_type_field(err, schema, "query", query, NULL, NULL, 0, false)) {
+	    return err->code;
+	}
+	if (NULL != (mutation = gql_type_get("Mutation"))) {
+	    if (NULL == gql_type_field(err, schema, "mutation", mutation, NULL, NULL, 0, false)) {
+		return err->code;
+	    }
+	}
+    } else {
+	gqlField	f = gql_type_get_field(schema, "query");
+
+	if (NULL == f || NULL == f->type) {
+	    return agoo_err_set(err, AGOO_ERR_NOT_FOUND, "schema query field not found.");
+	}
+	query = f->type;
+
+	if (NULL != (f = gql_type_get_field(schema, "mutation")) && NULL != f->type) {
+	    mutation = f->type;
+	}
+    }
+
+    // TBD if no query or mutation setup then add
+
     return AGOO_ERR_OK;
 }
 

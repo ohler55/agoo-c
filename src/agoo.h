@@ -3,12 +3,15 @@
 #ifndef AGOO_H
 #define AGOO_H
 
+#include <stdarg.h>
+
 #include "agoo/err.h"
 #include "agoo/method.h"
 #include "agoo/req.h"
 #include "agoo/text.h"
+#include "agoo/gqleval.h"
 
-#define AGOO_VERSION	"0.4.0"
+#define AGOO_VERSION	"0.5.0"
 
 struct _agooCon;
 
@@ -32,6 +35,9 @@ extern int	agoo_start(agooErr err, const char *version);
 extern void	agoo_shutdown(void (*stop)());
 
 extern agooText	agoo_respond(int status, const char *body, int blen, agooKeyVal headers);
-extern int	agoo_setup_graphql(agooErr err, const char *path);
+extern int	agoo_setup_graphql(agooErr err, const char *path, ...);
+
+extern gqlRef	agoo_query_object;
+extern gqlRef	agoo_mutation_object;
 
 #endif // AGOO_H

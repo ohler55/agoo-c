@@ -49,9 +49,6 @@ main(int argc, char **argv) {
 	printf("Failed to bind to port %d. %s\n", port, err.msg);
 	return err.code;
     }
-    if (AGOO_ERR_OK != agoo_setup_graphql(&err, "/graphql")) {
-	return err.code;
-    }
     // set up hooks or routes
     if (AGOO_ERR_OK != agoo_add_func_hook(&err, AGOO_GET, "/empty", empty_handler, true) ||
 	AGOO_ERR_OK != agoo_add_func_hook(&err, AGOO_GET, "/user/*", user_handler, true) ||
