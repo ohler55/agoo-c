@@ -1,5 +1,11 @@
 # CHANGELOG
 
+### 0.5.1 - 2019-04-11
+
+Makefile cleanup
+
+- Removed the targets that pulled code from the Agoo repo and put that in a separate script.
+
 ### 0.5.0 - 2019-04-06
 
 GraphQL
