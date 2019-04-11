@@ -15,7 +15,8 @@ email me directly or create an issue for additions or changes.
 make
 ```
 
-The library will be in the `lib` directory and the hdeaders will be in the `include` directory.
+The library will be in the `lib` directory and the headers will be in the `include` directory.
+A C11 or gcc-7 are needed to build.
 
 ## Examples
 
