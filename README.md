@@ -3,7 +3,7 @@
 Agoo webserver and GraphQL server in C with the goal of being the best
 performing webserver and GraphQL server across all languages. So far
 so good according to
-[benchmarks](http://opo.technology/benchmarks.html#web_benchmarks) and
+[benchmarks](https://github.com/the-benchmarker/web-frameworks) and
 [GraphQL benchmarks](https://github.com/ohler55/graphql-benchmarks).
 
 This is a new project. Feedback is required to keep it alive. Feel free to
