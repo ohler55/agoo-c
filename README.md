@@ -16,7 +16,7 @@ make
 ```
 
 The library will be in the `lib` directory and the headers will be in the `include` directory.
-A C11 or gcc-7 are needed to build.
+A C11 compiler or gcc-7 are needed to build.
 
 ## Examples
 
