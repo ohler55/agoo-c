@@ -26,9 +26,9 @@ A simple webserver demonstrating the use of handlers for a few routes.
 
 ### example/graphql
 
-## Releases
-
 A simple GraphQL server with handlers set up for a query and a mutation.
+
+## Releases
 
 See [file:CHANGELOG.md](CHANGELOG.md)
 
