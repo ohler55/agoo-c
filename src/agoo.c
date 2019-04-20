@@ -250,7 +250,7 @@ eval_loop(void *ptr) {
 
     atomic_fetch_add(&agoo_server.running, 1);
     while (agoo_server.active) {
-	if (NULL != (req = (agooReq)agoo_queue_pop(&agoo_server.eval_queue, 0.1))) {
+	if (NULL != (req = (agooReq)agoo_queue_pop(&agoo_server.eval_queue, 0.01))) {
 	    if (NULL == req->hook) {
 		bad_request(req, 404, __LINE__, NULL);
 		continue;
