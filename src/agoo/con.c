@@ -66,6 +66,7 @@ agoo_con_create(agooErr err, int sock, uint64_t id, agooBind b) {
 	c->timeout = dtime() + CON_TIMEOUT;
 	c->bind = b;
 	c->loop = NULL;
+	agoo_atomic_flag_init(&c->queued);
     }
     return c;
 }

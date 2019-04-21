@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "atomic.h"
 #include "err.h"
 #include "req.h"
 #include "response.h"
@@ -27,14 +28,12 @@ typedef struct _agooConLoop {
     struct _agooQueue	pub_queue;
     pthread_t		thread;
     int			id;
-    // TBD use mutex for head and tail, volatile also
+
     struct _agooRes	*res_head;
     struct _agooRes	*res_tail;
-
     pthread_mutex_t	lock;
-    
 } *agooConLoop;
-    
+
 typedef struct _agooCon {
     struct _agooCon		*next;
     int				sock;
@@ -49,7 +48,7 @@ typedef struct _agooCon {
 
     double			timeout;
     bool			closing;
-    bool			dead;
+    volatile bool		dead;
     volatile bool		hijacked;
     struct _agooReq		*req;
     struct _agooRes		*res_head;
@@ -57,6 +56,8 @@ typedef struct _agooCon {
 
     struct _agooUpgraded	*up; // only set for push connections
     agooConLoop			loop;
+
+    atomic_flag			queued;
 } *agooCon;
 
 extern agooCon		agoo_con_create(agooErr err, int sock, uint64_t id, struct _agooBind *b);
