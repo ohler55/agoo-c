@@ -22,6 +22,7 @@ struct _agooReq;
 struct _agooRes;
 struct _agooBind;
 struct _agooQueue;
+struct _agooIO;
 
 typedef struct _agooConLoop {
     struct _agooConLoop	*next;
@@ -56,6 +57,7 @@ typedef struct _agooCon {
 
     struct _agooUpgraded	*up; // only set for push connections
     agooConLoop			loop;
+    struct _agooIO		*io;
 
     atomic_flag			queued;
 } *agooCon;

@@ -8,7 +8,11 @@
 #include "debug.h"
 #include "dtime.h"
 #include "io.h"
+#include "log.h"
+#include "pub.h"
 #include "server.h"
+#include "subject.h"
+#include "upgraded.h"
 
 
 static int
@@ -21,28 +25,154 @@ con_send(agooErr err, agooIO io, agooCon c) {
 
 // TBD make sure the con max is not exceeded. Create another io object with threads if the max is exceeded.
 
+
+static void
+publish_pub(agooPub pub, agooIO io) {
+    agooUpgraded	up;
+    const char		*sub = pub->subject->pattern;
+    int			cnt = 0;
+
+    for (up = agoo_server.up_list; NULL != up; up = up->next) {
+	if (NULL != up->con && up->con->io == io && agoo_upgraded_match(up, sub)) {
+	    agooRes	res = agoo_res_create(up->con);
+
+	    if (NULL != res) {
+		if (NULL == up->con->res_tail) {
+		    up->con->res_head = res;
+		} else {
+		    up->con->res_tail->next = res;
+		}
+		up->con->res_tail = res;
+		res->con_kind = AGOO_CON_ANY;
+		agoo_res_set_message(res, agoo_text_dup(pub->msg));
+		cnt++;
+	    }
+	}
+    }
+}
+static void
+unsubscribe_pub(agooPub pub) {
+    if (NULL == pub->up) {
+	agooUpgraded	up;
+
+	for (up = agoo_server.up_list; NULL != up; up = up->next) {
+	    agoo_upgraded_del_subject(up, pub->subject);
+	}
+    } else {
+	agoo_upgraded_del_subject(pub->up, pub->subject);
+    }
+}
+
+static void
+process_pub_con(agooPub pub, agooIO io) {
+    agooUpgraded	up = pub->up;
+
+    if (NULL != up && NULL != up->con && up->con->io == io) {
+	int	pending;
+
+	// TBD Change pending to be based on length of con queue
+	if (1 == (pending = atomic_fetch_sub(&up->pending, 1))) {
+	    if (NULL != up && agoo_server.ctx_nil_value != up->ctx && up->on_empty) {
+		agooReq	req = agoo_req_create(0);
+
+		req->up = up;
+		req->method = AGOO_ON_EMPTY;
+		req->hook = agoo_hook_create(AGOO_NONE, NULL, up->ctx, PUSH_HOOK, &agoo_server.eval_queue);
+		agoo_upgraded_ref(up);
+		agoo_queue_push(&agoo_server.eval_queue, (void*)req);
+	    }
+	}
+    }
+    switch (pub->kind) {
+    case AGOO_PUB_CLOSE:
+	// A close after already closed is used to decrement the reference
+	// count on the upgraded so it can be destroyed in the io loop
+	// threads.
+	if (NULL != up->con && up->con->io == io) {
+	    agooRes	res = agoo_res_create(up->con);
+
+	    if (NULL != res) {
+		if (NULL == up->con->res_tail) {
+		    up->con->res_head = res;
+		} else {
+		    up->con->res_tail->next = res;
+		}
+		up->con->res_tail = res;
+		res->con_kind = up->con->bind->kind;
+		res->close = true;
+	    }
+	}
+	break;
+    case AGOO_PUB_WRITE: {
+	if (NULL == up->con) {
+	    agoo_log_cat(&agoo_warn_cat, "Connection already closed. WebSocket write failed.");
+	} else if (up->con->io == io) {
+	    agooRes	res = agoo_res_create(up->con);
+
+	    if (NULL != res) {
+		if (NULL == up->con->res_tail) {
+		    up->con->res_head = res;
+		} else {
+		    up->con->res_tail->next = res;
+		}
+		up->con->res_tail = res;
+		res->con_kind = AGOO_CON_ANY;
+		agoo_res_set_message(res, pub->msg);
+	    }
+	}
+	break;
+    case AGOO_PUB_SUB:
+	if (NULL != up && up->con->io == io) {
+	    agoo_upgraded_add_subject(pub->up, pub->subject);
+	    pub->subject = NULL;
+	}
+	break;
+    case AGOO_PUB_UN:
+	if (NULL != up && up->con->io == io) {
+	    unsubscribe_pub(pub);
+	}
+	break;
+    case AGOO_PUB_MSG:
+	publish_pub(pub, io);
+	break;
+    }
+    default:
+	break;
+    }
+    agoo_pub_destroy(pub);
+}
+
+
 void*
 poll_loop(void *x) {
     agooIO		io = (agooIO)x;
-    struct pollfd	pa[MAX_IO_CONS + 2];
+    struct pollfd	pa[MAX_IO_CONS + 1];
     struct pollfd	*pp;
     agooCon		c;
+    agooPub		pub;
     struct _agooErr	err = AGOO_ERR_INIT;
     bool		dirty;
     int			i;
-    //int			con_queue_fd = agoo_queue_listen(&agoo_server.con_queue);
-    //int			pub_queue_fd = agoo_queue_listen(&io->pub_queue);
+    int			pub_queue_fd = agoo_queue_listen(&io->pub_queue);
+    int			err_cnt = 0;
 
     atomic_fetch_add(&agoo_server.running, 1);
     while (agoo_server.active) {
 	dirty = false;
-	for (c = io->cons, pp = pa; NULL != c; c = c->next) {
+	pp = pa;
+	pp->fd = pub_queue_fd;
+	pp->revents = 0;
+	pp++;
+	for (c = io->cons; NULL != c; c = c->next) {
 	    if (c->dead || 0 == c->sock) {
 		dirty = true;
 		continue;
 	    }
 	    if (AGOO_ERR_OK != con_send(&err, io, c)) {
-		// TBD log error? and close
+		agoo_log_cat(&agoo_error_cat, "Send on %llu failed.", (unsigned long long)c->id);
+		c->dead = true;
+		dirty = true;
+		continue;
 	    }
 	    pp->fd = c->sock;
 	    c->pp = pp;
@@ -50,17 +180,24 @@ poll_loop(void *x) {
 	    pp->revents = 0;
 	    pp++;
 	}
-	// TBD what about queue notifiers?
 	if (0 > (i = poll(pa, pp - pa, 10))) {
 	    if (EAGAIN == errno) {
 		continue;
 	    }
-	    // TBD log error, maybe keep a count and exit if too many
-	    //printf("*-*-* polling error: %s\n", strerror(errno));
+	    agoo_log_cat(&agoo_warn_cat, "poll() failed.");
+	    err_cnt++;
+	    if (3 < err_cnt) {
+		agoo_log_cat(&agoo_error_cat, "too many polling errors.");
+		agoo_server_shutdown("", NULL);
+	    }
 	    continue;
 	}
+	err_cnt = 0;
 	if (0 == i) {
 	    continue;
+	}
+	while (NULL != (pub = (agooPub)agoo_queue_pop(&io->pub_queue, 0.0))) {
+	    process_pub_con(pub, io);
 	}
 	for (c = io->cons; NULL != c; c = c->next) {
 	    if (c->dead || 0 == c->sock || NULL == c->pp || 0 == c->pp->revents) {
@@ -68,7 +205,10 @@ poll_loop(void *x) {
 		continue;
 	    }
 	    if (0 != (c->pp->revents & POLLERR)) {
-		// TBD log error and mark con as closed
+		agoo_log_cat(&agoo_warn_cat, "Error on socket %llu.", (unsigned long long)c->id);
+		c->dead = true;
+		dirty = true;
+		continue;
 	    }
 	    if (0 != (c->pp->revents & POLLIN)) {
 		if (!atomic_flag_test_and_set(&c->queued)) {

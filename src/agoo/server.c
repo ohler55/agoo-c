@@ -121,6 +121,8 @@ listen_loop(void *x) {
 		    agoo_log_cat(&agoo_con_cat, "Server with pid %d accepted connection %llu on %s [%d]",
 				 getpid(), (unsigned long long)cnt, b->id, con->sock);
 
+		    // TBD pick a io or create a new one
+
 		    con_cnt = atomic_fetch_add(&agoo_server.con_cnt, 1);
 		    if (agoo_server.loop_max > agoo_server.loop_cnt && agoo_server.loop_cnt * LOOP_UP < con_cnt) {
 			add_con_loop();
