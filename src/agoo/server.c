@@ -13,6 +13,7 @@
 #include "dtime.h"
 #include "http.h"
 #include "hook.h"
+#include "io.h"
 #include "log.h"
 #include "page.h"
 #include "pub.h"
@@ -51,16 +52,39 @@ agoo_server_setup(agooErr err) {
     return AGOO_ERR_OK;
 }
 
-static void
-add_con_loop() {
-    struct _agooErr	err = AGOO_ERR_INIT;
-    agooConLoop		loop = agoo_conloop_create(&err, 0);
+static agooIO
+add_io(agooErr err) {
+    agooIO	io = agoo_io_create(err);
 
-    if (NULL != loop) {
-	loop->next = agoo_server.con_loops;
-	agoo_server.con_loops = loop;
-	agoo_server.loop_cnt++;
+    if (NULL != io) {
+	io->next = agoo_server.ios;
+	agoo_server.ios = io;
     }
+    return io;
+}
+
+static void
+pick_io(agooCon c) {
+    int		cnt;
+    int		lo = MAX_IO_CONS;
+    agooIO	lo_io = NULL;
+    agooIO	io;
+
+    for (io = agoo_server.ios; NULL != io; io = io->next) {
+	if (lo > (cnt = agoo_io_con_count(io))) {
+	    lo = cnt;
+	    lo_io = io;
+	}
+    }
+    if (NULL == lo_io) {
+	struct _agooErr	err = AGOO_ERR_INIT;
+
+	if (NULL == (lo_io = add_io(&err))) {
+	    agoo_log_cat(&agoo_error_cat, "Failed to add connection. %s.", err.msg);
+	    return;
+	}
+    }
+    agoo_io_add_con(lo_io, c);
 }
 
 static void*
@@ -107,7 +131,6 @@ listen_loop(void *x) {
 		    cnt--;
 		    agoo_err_clear(&err);
 		} else {
-		    int	con_cnt;
 #ifdef OSX_OS
 		    setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval));
 #endif
@@ -121,13 +144,7 @@ listen_loop(void *x) {
 		    agoo_log_cat(&agoo_con_cat, "Server with pid %d accepted connection %llu on %s [%d]",
 				 getpid(), (unsigned long long)cnt, b->id, con->sock);
 
-		    // TBD pick a io or create a new one
-
-		    con_cnt = atomic_fetch_add(&agoo_server.con_cnt, 1);
-		    if (agoo_server.loop_max > agoo_server.loop_cnt && agoo_server.loop_cnt * LOOP_UP < con_cnt) {
-			add_con_loop();
-		    }
-		    agoo_queue_push(&agoo_server.con_queue, (void*)con);
+		    pick_io(con);
 		}
 	    }
 	    if (0 != (p->revents & (POLLERR | POLLHUP | POLLNVAL))) {
@@ -168,7 +185,7 @@ agoo_server_start(agooErr err, const char *app_name, const char *version) {
     // reasonable.
     if (1 >= agoo_server.thread_cnt) {
 	while (agoo_server.loop_cnt < agoo_server.loop_max) {
-	    add_con_loop();
+	    add_io(err);
 	    xcnt++;
 	}
     }

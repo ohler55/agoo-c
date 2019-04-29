@@ -158,6 +158,15 @@ poll_loop(void *x) {
 
     atomic_fetch_add(&agoo_server.running, 1);
     while (agoo_server.active) {
+	pthread_mutex_lock(&io->con_lock);
+	while (NULL != (c = io->new_cons)) {
+	    io->new_cons = c->next;
+	    c->io = io;
+	    c->next = io->cons;
+	    io->cons = c;
+	    atomic_fetch_add(&io->con_cnt, 1);
+	}
+	pthread_mutex_unlock(&io->con_lock);
 	dirty = false;
 	pp = pa;
 	pp->fd = pub_queue_fd;
@@ -221,6 +230,7 @@ poll_loop(void *x) {
 	    agooCon	next;
 
 	    for (c = io->cons; NULL != c; c = next) {
+		next = c->next;
 		if (c->dead || 0 == c->sock) {
 		    // TBD make sure it is not on the recv_queue
 		    next = c->next;
@@ -229,6 +239,7 @@ poll_loop(void *x) {
 		    } else {
 			prev->next = next;
 		    }
+		    atomic_fetch_sub(&io->con_cnt, 1);
 		    agoo_con_destroy(c);
 		} else {
 		    prev = c;
@@ -258,7 +269,7 @@ recv_loop(void *x) {
 }
 
 agooIO
-agoo_io_create(agooErr err, int id) {
+agoo_io_create(agooErr err) {
      agooIO	io;
 
     if (NULL == (io = (agooIO)AGOO_MALLOC(sizeof(struct _agooIO)))) {
@@ -272,11 +283,13 @@ agoo_io_create(agooErr err, int id) {
 	    AGOO_FREE(io);
 	    return NULL;
 	}
-	io->id = id;
 	io->cons = NULL;
+	io->new_cons = NULL;
 	io->res_head = NULL;
 	io->res_tail = NULL;
-	if (0 != pthread_mutex_init(&io->lock, 0)) {
+	io->con_cnt = AGOO_ATOMIC_INT_INIT(0);
+	if (0 != pthread_mutex_init(&io->con_lock, 0) ||
+	    0 != pthread_mutex_init(&io->res_lock, 0)) {
 	    AGOO_FREE(io);
 	    agoo_err_no(err, "Failed to initialize io mutex.");
 	    return NULL;
@@ -303,4 +316,18 @@ agoo_io_destroy(agooIO io) {
 	AGOO_FREE(res);
     }
     AGOO_FREE(io);
+}
+
+int
+agoo_io_con_count(agooIO io) {
+    return atomic_load(&io->con_cnt);
+}
+
+void
+agoo_io_add_con(agooIO io, struct _agooCon *con) {
+    con->io = io;
+    pthread_mutex_lock(&io->con_lock);
+    con->next = io->new_cons;
+    io->new_cons = con;
+    pthread_mutex_unlock(&io->con_lock);
 }

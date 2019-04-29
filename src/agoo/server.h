@@ -14,6 +14,7 @@
 
 struct _agooCon;
 struct _agooConLoop;
+struct _agooIO;
 struct _agooPub;
 struct _agooReq;
 struct _agooUpgraded;
@@ -32,6 +33,7 @@ typedef struct _agooServer {
 
     struct _agooQueue		eval_queue;
 
+    struct _agooIO		*ios;
     struct _agooConLoop		*con_loops;
     int				loop_max;
     int				loop_cnt;
