@@ -59,6 +59,7 @@ add_io(agooErr err) {
     if (NULL != io) {
 	io->next = agoo_server.ios;
 	agoo_server.ios = io;
+	agoo_server.loop_cnt++;
     }
     return io;
 }
@@ -176,7 +177,8 @@ agoo_server_start(agooErr err, const char *app_name, const char *version) {
 	return agoo_err_set(err, stat, "Failed to create server listener thread. %s", strerror(stat));
     }
     xcnt++;
-    agoo_server.con_loops = agoo_conloop_create(err, 0);
+    //agoo_server.con_loops = agoo_conloop_create(err, 0);
+    add_io(err); // TBD check error
     agoo_server.loop_cnt = 1;
     xcnt++;
 
@@ -185,7 +187,7 @@ agoo_server_start(agooErr err, const char *app_name, const char *version) {
     // reasonable.
     if (1 >= agoo_server.thread_cnt) {
 	while (agoo_server.loop_cnt < agoo_server.loop_max) {
-	    add_io(err);
+	    add_io(err);  // TBD check error
 	    xcnt++;
 	}
     }
