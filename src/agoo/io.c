@@ -17,17 +17,11 @@
 
 static int
 con_send(agooErr err, agooIO io, agooCon c) {
-
-    printf("*** send\n");
-    if (NULL != c->bind->write) {
+    if (NULL != c->res_head && NULL != c->bind->write) {
 	if (c->bind->write(c)) {
 	    // TBD error, mark as closed?
-	    printf("*** write returned true\n");
 	}
-	printf("*** wrote\n");
     }
-    // TBD send
-
     return AGOO_ERR_OK;
 }
 
@@ -182,6 +176,7 @@ poll_loop(void *x) {
 	pp++;
 	for (c = io->cons; NULL != c; c = c->next) {
 	    if (c->dead || 0 == c->sock) {
+		printf("*** dead\n");
 		dirty = true;
 		continue;
 	    }
@@ -229,6 +224,7 @@ poll_loop(void *x) {
 	    }
 	    if (0 != (c->pp->revents & POLLIN)) {
 		if (!atomic_flag_test_and_set(&c->queued)) {
+		    //printf("*** push\n");
 		    agoo_queue_push(&io->recv_queue, c);
 		}
 	    }
@@ -267,17 +263,15 @@ recv_loop(void *x) {
 
     atomic_fetch_add(&agoo_server.running, 1);
     while (agoo_server.active) {
-	if (NULL == (c = agoo_queue_pop(&io->recv_queue, 0.01))) {
+	if (NULL == (c = agoo_queue_pop(&io->recv_queue, 0.1))) {
 	    continue;
 	}
-	printf("*** popped %p\n", (void*)c);
 	if (NULL != c->bind->read) {
 	    if (c->bind->read(c)) {
 		// TBD error, mark as closed?
-		printf("*** read returned true\n");
 	    }
-	    printf("*** read\n");
 	}
+	//printf("*** pop\n");
 	atomic_flag_clear(&c->queued);
     }
     atomic_fetch_sub(&agoo_server.running, 1);

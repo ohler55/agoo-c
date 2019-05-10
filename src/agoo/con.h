@@ -52,11 +52,13 @@ typedef struct _agooCon {
     volatile bool		dead;
     volatile bool		hijacked;
     struct _agooReq		*req;
-    struct _agooRes		*res_head;
-    struct _agooRes		*res_tail;
+    struct _agooRes		*res_head; // TBD make volatile
+    struct _agooRes		*res_tail; // TBD make volatile
+    // TBD maybe just need lock when changing tail?
+    pthread_mutex_t		res_lock;
 
     struct _agooUpgraded	*up; // only set for push connections
-    agooConLoop			loop;
+    //agooConLoop			loop;
     struct _agooIO		*io;
 
     atomic_flag			queued;
@@ -72,5 +74,7 @@ extern void		agoo_conloop_destroy(agooConLoop loop);
 extern bool		agoo_con_http_read(agooCon c);
 extern bool		agoo_con_http_write(agooCon c);
 extern short		agoo_con_http_events(agooCon c);
+
+extern void		agoo_con_res_append(agooCon c, struct _agooRes *res);
 
 #endif // AGOO_CON_H

@@ -9,6 +9,8 @@
 #include <agoo/res.h>
 #include <agoo/server.h>
 
+#include <agoo/dtime.h>
+
 static agooText	emptyResp = NULL;
 
 static void

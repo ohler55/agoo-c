@@ -11,14 +11,15 @@ agooRes
 agoo_res_create(agooCon con) {
     agooRes	res = NULL;
 
-    pthread_mutex_lock(&con->loop->lock);
-    if (NULL != (res = con->loop->res_head)) {
-	con->loop->res_head = res->next;
-	if (NULL == con->loop->res_head) {
-	    con->loop->res_tail = NULL;
+    // TBD res cache on io
+    /*
+    if (NULL != (res = con->res_head)) {
+	con->res_head = res->next;
+	if (NULL == con->res_head) {
+	    con->res_tail = NULL;
 	}
     }
-    pthread_mutex_unlock(&con->loop->lock);
+    */
 
     if (NULL == res) {
 	if (NULL == (res = (agooRes)AGOO_MALLOC(sizeof(struct _agooRes)))) {
@@ -44,16 +45,26 @@ agoo_res_destroy(agooRes res) {
 	if (NULL != message) {
 	    agoo_text_release(message);
 	}
-	res->next = NULL;
-	pthread_mutex_lock(&res->con->loop->lock);
-	if (NULL == res->con->loop->res_tail) {
-	    res->con->loop->res_head = res;
-	} else {
-	    res->con->loop->res_tail->next = res;
-	}
-	res->con->loop->res_tail = res;
-	pthread_mutex_unlock(&res->con->loop->lock);
     }
+    AGOO_FREE(res);
+    /*
+    if (NULL != res) {
+	agooText	message = agoo_res_message(res);
+
+	if (NULL != message) {
+	    agoo_text_release(message);
+	}
+	res->next = NULL;
+	pthread_mutex_lock(&res->con->res_lock);
+	if (NULL == res->con->res_tail) {
+	    res->con->res_head = res;
+	} else {
+	    res->con->res_tail->next = res;
+	}
+	res->con->res_tail = res;
+	pthread_mutex_unlock(&res->con->res_lock);
+    }
+    */
 }
 
 void
@@ -63,4 +74,3 @@ agoo_res_set_message(agooRes res, agooText t) {
     }
     atomic_store(&res->message, t);
 }
-

@@ -27,7 +27,12 @@ extern void	agoo_res_set_message(agooRes res, agooText t);
 
 static inline agooText
 agoo_res_message(agooRes res) {
-    return atomic_load(&res->message);
+    agooText	t = NULL;
+
+    if (NULL != res) {
+	t = atomic_load(&res->message);
+    }
+    return t;
 }
 
 #endif // AGOO_RES_H
