@@ -18,7 +18,8 @@
 static int
 con_send(agooErr err, agooIO io, agooCon c) {
     if (NULL != c->res_head && NULL != c->bind->write) {
-	if (c->bind->write(c)) {
+	if (!c->bind->write(c)) {
+	    c->dead = true;
 	    // TBD error, mark as closed?
 	}
     }
@@ -176,7 +177,7 @@ poll_loop(void *x) {
 	pp++;
 	for (c = io->cons; NULL != c; c = c->next) {
 	    if (c->dead || 0 == c->sock) {
-		printf("*** dead\n");
+		printf("*** ***** dead\n");
 		dirty = true;
 		continue;
 	    }
@@ -188,11 +189,15 @@ poll_loop(void *x) {
 	    }
 	    pp->fd = c->sock;
 	    c->pp = pp;
-	    pp->events = POLLERR | POLLIN;
+	    if (atomic_load(&c->queued)) {
+		pp->events = POLLERR;
+	    } else {
+		pp->events = POLLERR | POLLIN;
+	    }
 	    pp->revents = 0;
 	    pp++;
 	}
-	if (0 > (i = poll(pa, pp - pa, 10))) {
+	if (0 > (i = poll(pa, pp - pa, 1))) {
 	    if (EAGAIN == errno) {
 		continue;
 	    }
@@ -201,19 +206,20 @@ poll_loop(void *x) {
 	    if (3 < err_cnt) {
 		agoo_log_cat(&agoo_error_cat, "too many polling errors.");
 		agoo_server_shutdown("", NULL);
+		break;
 	    }
 	    continue;
 	}
 	err_cnt = 0;
-	if (0 == i) {
-	    continue;
-	}
 	while (NULL != (pub = (agooPub)agoo_queue_pop(&io->pub_queue, 0.0))) {
 	    process_pub_con(pub, io);
 	}
 	for (c = io->cons; NULL != c; c = c->next) {
-	    if (c->dead || 0 == c->sock || NULL == c->pp || 0 == c->pp->revents) {
+	    if (c->dead || 0 == c->sock /* || NULL == c->pp || 0 == c->pp->revents*/) {
 		dirty = true;
+		continue;
+	    }
+	    if (NULL == c->pp || 0 == c->pp->revents) {
 		continue;
 	    }
 	    if (0 != (c->pp->revents & POLLERR)) {
@@ -223,8 +229,10 @@ poll_loop(void *x) {
 		continue;
 	    }
 	    if (0 != (c->pp->revents & POLLIN)) {
-		if (!atomic_flag_test_and_set(&c->queued)) {
-		    //printf("*** push\n");
+		//if (!atomic_flag_test_and_set(&c->queued)) {
+		if (!atomic_load(&c->queued)) {
+		    atomic_store(&c->queued, true);
+		    // TBD check then set, only one other thread will be looking at it
 		    agoo_queue_push(&io->recv_queue, c);
 		}
 	    }
@@ -268,11 +276,13 @@ recv_loop(void *x) {
 	}
 	if (NULL != c->bind->read) {
 	    if (c->bind->read(c)) {
-		// TBD error, mark as closed?
+		printf("*** read dead\n");
+		c->dead = true;
 	    }
 	}
 	//printf("*** pop\n");
-	atomic_flag_clear(&c->queued);
+	//atomic_flag_clear(&c->queued);
+	atomic_store(&c->queued, false);
     }
     atomic_fetch_sub(&agoo_server.running, 1);
 

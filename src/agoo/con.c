@@ -66,7 +66,8 @@ agoo_con_create(agooErr err, int sock, uint64_t id, agooBind b) {
 	c->id = id;
 	c->timeout = dtime() + CON_TIMEOUT;
 	c->bind = b;
-	agoo_atomic_flag_init(&c->queued);
+	//agoo_atomic_flag_init(&c->queued);
+	atomic_init(&c->queued, false);
 	if (0 != pthread_mutex_init(&c->res_lock, 0)) {
 	    agoo_err_no(err, "connnection mutex init failed.");
 	    return NULL;
@@ -443,6 +444,7 @@ agoo_con_http_read(agooCon c) {
     ssize_t	cnt;
 
     if (c->dead || 0 == c->sock || c->closing) {
+	printf("*** read dead or closing\n");
 	return true;
     }
     if (NULL != c->req) {
@@ -452,6 +454,14 @@ agoo_con_http_read(agooCon c) {
     }
     c->timeout = dtime() + CON_TIMEOUT;
     if (0 >= cnt) {
+	if (0 == cnt) {
+	    c->dead = true;
+	    return true;
+	}
+	if (EAGAIN == errno) {
+	    // Try again.
+	    return false;
+	}
 	// If nothing read then no need to complain. Just close.
 	if (0 < c->bcnt) {
 	    if (0 == cnt) {
@@ -1199,30 +1209,33 @@ agooConLoop
 agoo_conloop_createx(agooErr err, int id) {
      agooConLoop	loop;
 
-    if (NULL == (loop = (agooConLoop)AGOO_MALLOC(sizeof(struct _agooConLoop)))) {
-	AGOO_ERR_MEM(err, "connection thread");
-    } else {
-	int	stat;
+     printf("*** loop create\n");
+     return NULL;
+     if (NULL == (loop = (agooConLoop)AGOO_MALLOC(sizeof(struct _agooConLoop)))) {
+	 AGOO_ERR_MEM(err, "connection thread");
+     } else {
+	 int	stat;
 
-	loop->next = NULL;
-	if (AGOO_ERR_OK != agoo_queue_multi_init(err, &loop->pub_queue, 256, true, false)) {
-	    AGOO_FREE(loop);
-	    return NULL;
-	}
-	loop->id = id;
-	loop->res_head = NULL;
-	loop->res_tail = NULL;
-	if (0 != pthread_mutex_init(&loop->lock, 0)) {
-	    AGOO_FREE(loop);
-	    agoo_err_no(err, "Failed to initialize loop mutex.");
-	    return NULL;
-	}
-	if (0 != (stat = pthread_create(&loop->thread, NULL, agoo_con_loop, loop))) {
-	    agoo_err_set(err, stat, "Failed to create connection loop. %s", strerror(stat));
-	    return NULL;
-	}
-    }
-    return loop;
+	 loop->next = NULL;
+	 if (AGOO_ERR_OK != agoo_queue_multi_init(err, &loop->pub_queue, 256, true, false)) {
+	     AGOO_FREE(loop);
+	     return NULL;
+	 }
+
+	 loop->id = id;
+	 loop->res_head = NULL;
+	 loop->res_tail = NULL;
+	 if (0 != pthread_mutex_init(&loop->lock, 0)) {
+	     AGOO_FREE(loop);
+	     agoo_err_no(err, "Failed to initialize loop mutex.");
+	     return NULL;
+	 }
+	 if (0 != (stat = pthread_create(&loop->thread, NULL, agoo_con_loop, loop))) {
+	     agoo_err_set(err, stat, "Failed to create connection loop. %s", strerror(stat));
+	     return NULL;
+	 }
+     }
+     return loop;
 }
 
 void

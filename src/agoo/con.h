@@ -61,7 +61,8 @@ typedef struct _agooCon {
     //agooConLoop			loop;
     struct _agooIO		*io;
 
-    atomic_flag			queued;
+    //atomic_flag			queued;
+    atomic_int			queued;
 } *agooCon;
 
 extern agooCon		agoo_con_create(agooErr err, int sock, uint64_t id, struct _agooBind *b);
