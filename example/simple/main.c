@@ -17,7 +17,7 @@ empty_handler(agooReq req) {
 	emptyResp = agoo_respond(200, NULL, 0, NULL);
 	agoo_text_ref(emptyResp);
     }
-    agoo_res_set_message(req->res, emptyResp);
+    agoo_res_message_push(req->res, emptyResp, true);
 }
 
 static int	user_off = 6;
@@ -26,7 +26,7 @@ static void
 user_handler(agooReq req) {
     agooText	t = agoo_respond(200, req->path.start + user_off, req->path.len - user_off, NULL);
 
-    agoo_res_set_message(req->res, t);
+    agoo_res_message_push(req->res, t, true);
 }
 
 int

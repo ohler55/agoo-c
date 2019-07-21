@@ -11,7 +11,9 @@ cp ../agoo/ext/agoo/bind.[ch] src/agoo
 cp ../agoo/ext/agoo/con.[ch] src/agoo
 cp ../agoo/ext/agoo/debug.[ch] src/agoo
 cp ../agoo/ext/agoo/doc.[ch] src/agoo
+cp ../agoo/ext/agoo/domain.[ch] src/agoo
 cp ../agoo/ext/agoo/dtime.[ch] src/agoo
+cp ../agoo/ext/agoo/early.[ch] src/agoo
 cp ../agoo/ext/agoo/err.[ch] src/agoo
 cp ../agoo/ext/agoo/graphql.[ch] src/agoo
 cp ../agoo/ext/agoo/gqlcobj.[ch] src/agoo
