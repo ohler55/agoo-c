@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [Unreleased]
+
+## [0.6.0] - 2019-07-26
+
+Early hints and sub-domains
+
+### Added
+
+- Support for early hints added.
+
+- Sub-domains based on the host header in an HTTP request can now
+  be used to set up multiple root directories.
+
 ### 0.5.1 - 2019-04-11
 
 Makefile cleanup
