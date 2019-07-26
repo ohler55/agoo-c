@@ -3,7 +3,7 @@
 Agoo webserver and GraphQL server in C with the goal of being the best
 performing webserver and GraphQL server across all languages. So far
 so good according to
-[benchmarks](http://opo.technology/benchmarks.html#web_benchmarks) and
+[benchmarks](https://github.com/the-benchmarker/web-frameworks) and
 [GraphQL benchmarks](https://github.com/ohler55/graphql-benchmarks).
 
 This is a new project. Feedback is required to keep it alive. Feel free to
@@ -15,7 +15,8 @@ email me directly or create an issue for additions or changes.
 make
 ```
 
-The library will be in the `lib` directory and the hdeaders will be in the `include` directory.
+The library will be in the `lib` directory and the headers will be in the `include` directory.
+A C11 compiler or gcc-7 are needed to build.
 
 ## Examples
 
@@ -25,9 +26,9 @@ A simple webserver demonstrating the use of handlers for a few routes.
 
 ### example/graphql
 
-## Releases
-
 A simple GraphQL server with handlers set up for a query and a mutation.
+
+## Releases
 
 See [file:CHANGELOG.md](CHANGELOG.md)
 

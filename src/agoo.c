@@ -241,7 +241,7 @@ bad_request(agooReq req, int status, int line, const char *body) {
 	cnt = snprintf(buf, sizeof(buf), "HTTP/1.1 %d %s\r\nConnection: Close\r\nContent-Length: 0\r\n\r\n", status, msg);
     }
     req->res->close = true;
-    agoo_res_set_message(req->res, agoo_text_create(buf, cnt));
+    agoo_res_message_push(req->res, agoo_text_create(buf, cnt), true);
 }
 
 static void*
@@ -250,7 +250,7 @@ eval_loop(void *ptr) {
 
     atomic_fetch_add(&agoo_server.running, 1);
     while (agoo_server.active) {
-	if (NULL != (req = (agooReq)agoo_queue_pop(&agoo_server.eval_queue, 0.1))) {
+	if (NULL != (req = (agooReq)agoo_queue_pop(&agoo_server.eval_queue, 0.01))) {
 	    if (NULL == req->hook) {
 		bad_request(req, 404, __LINE__, NULL);
 		continue;
