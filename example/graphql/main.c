@@ -13,6 +13,10 @@
 #include <agoo/sdl.h>
 #include <agoo/server.h>
 
+// Start the app and then use curl or a browser to access this URL.
+//
+// http://localhost:6464/graphql?query={hello}
+
 static agooText		emptyResp = NULL;
 
 static const char	*sdl = "\n\
@@ -30,7 +34,7 @@ empty_handler(agooReq req) {
 	emptyResp = agoo_respond(200, NULL, 0, NULL);
 	agoo_text_ref(emptyResp);
     }
-    agoo_res_set_message(req->res, emptyResp);
+    agoo_res_message_push(req->res, emptyResp);
 }
 
 ///// Query type setup
@@ -112,7 +116,7 @@ main(int argc, char **argv) {
     struct _agooErr	err = AGOO_ERR_INIT;
     int			port = 6464;
 
-    if (AGOO_ERR_OK != agoo_init(&err, "simple")) {
+    if (AGOO_ERR_OK != agoo_init(&err, "hello")) {
 	printf("Failed to initialize Agoo. %s\n", err.msg);
 	return err.code;
     }

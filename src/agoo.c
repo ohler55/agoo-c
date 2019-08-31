@@ -241,7 +241,7 @@ bad_request(agooReq req, int status, int line, const char *body) {
 	cnt = snprintf(buf, sizeof(buf), "HTTP/1.1 %d %s\r\nConnection: Close\r\nContent-Length: 0\r\n\r\n", status, msg);
     }
     req->res->close = true;
-    agoo_res_message_push(req->res, agoo_text_create(buf, cnt), true);
+    agoo_res_message_push(req->res, agoo_text_create(buf, cnt));
 }
 
 static void*

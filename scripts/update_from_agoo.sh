@@ -20,6 +20,7 @@ cp ../agoo/ext/agoo/gqlcobj.[ch] src/agoo
 cp ../agoo/ext/agoo/gqleval.[ch] src/agoo
 cp ../agoo/ext/agoo/gqlintro.[ch] src/agoo
 cp ../agoo/ext/agoo/gqljson.[ch] src/agoo
+cp ../agoo/ext/agoo/gqlsub.[ch] src/agoo
 cp ../agoo/ext/agoo/gqlvalue.[ch] src/agoo
 cp ../agoo/ext/agoo/hook.[ch] src/agoo
 cp ../agoo/ext/agoo/http.[ch] src/agoo
