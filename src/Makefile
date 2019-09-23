@@ -1,25 +1,24 @@
 CC=cc
 CV=$(shell if [ `uname` = "Darwin" ]; then echo "c11"; elif [ `uname` = "Linux" ]; then echo "gnu11"; fi;)
 OS=$(shell echo `uname`)
+ifeq ($(build),release)
+	CFLAGS=-c -Wall -O3 -std=$(CV) -pedantic -D$(OS) -DHAVE_STDATOMIC_H
+else
+	CFLAGS=-c -Wall -g -Og -std=$(CV) -pedantic -D$(OS) -DHAVE_STDATOMIC_H
+endif
+
 SSL_INC=
 ifneq (,$(wildcard /usr/local/opt/openssl/include/openssl/ssl.h))
 	SSL_INC=-I/usr/local/opt/openssl/include
-	SSL_HAVE=-DHAVE_OPENSSL_SSL_H
+	CFLAGS+= -DHAVE_OPENSSL_SSL_H
 else ifneq (,$(wildcard /usr/local/openssl/include/openssl/ssl.h))
 	SSL_INC=-I/usr/local/openssl/include
-	SSL_HAVE=-DHAVE_OPENSSL_SSL_H
-endif
-
-ifeq ($(build),release)
-	CFLAGS=-c -Wall -O3 -std=$(CV) -pedantic -D$(OS) -DOPO_TS -DHAVE_STDATOMIC_H $(SSL_HAVE)
-else
-	CFLAGS=-c -Wall -g -Og -std=$(CV) -pedantic -D$(OS) -DOPO_TS -DHAVE_STDATOMIC_H $(SSL_HAVE)
+	CFLAGS= -DHAVE_OPENSSL_SSL_H
 endif
 
 SRC_DIR=.
 INC_DIR=../include
 LIB_DIR=../lib
-LIB_DIRS=
 INC_DIRS=-Iagoo $(SSL_INC)
 
 SRCS=$(wildcard agoo/*.c) $(wildcard *.c)

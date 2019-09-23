@@ -4,6 +4,15 @@ OS=$(shell echo `uname`)
 CFLAGS=-c -Wall -O3 -std=$(CV) -pedantic -D$(OS)
 #CFLAGS=-c -Wall -g -Og -std=$(CV) -pedantic -D$(OS)
 
+SSL_INC=
+ifneq (,$(wildcard /usr/local/opt/openssl/include/openssl/ssl.h))
+	SSL_INC=-I/usr/local/opt/openssl/include
+	CFLAGS+= -DHAVE_OPENSSL_SSL_H
+else ifneq (,$(wildcard /usr/local/openssl/include/openssl/ssl.h))
+	SSL_INC=-I/usr/local/openssl/include
+	CFLAGS+= -DHAVE_OPENSSL_SSL_H
+endif
+
 SSL_LIB=
 SSL_LIB_DIR=
 ifneq (,$(wildcard /usr/local/opt/openssl/lib/libssl.a))
@@ -17,7 +26,7 @@ endif
 
 SRC_DIR=.
 LIB_DIRS=-L../../lib $(SSL_LIB_DIR)
-INC_DIRS=-I../../include
+INC_DIRS=-I../../include $(SSL_INC)
 
 SRCS=$(shell find $(SRC_DIR) -type f -name "*.c" -print)
 LIBS=-lagoo $(SSL_LIB) -lpthread -lm
