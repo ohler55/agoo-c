@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2019-09-23
+
+TLS (SSL) support
+
+### Added
+
+- SSL support
+
 ## [0.6.0] - 2019-07-26
 
 Early hints and sub-domains
