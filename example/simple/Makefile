@@ -4,11 +4,23 @@ OS=$(shell echo `uname`)
 CFLAGS=-c -Wall -O3 -std=$(CV) -pedantic -D$(OS)
 #CFLAGS=-c -Wall -g -Og -std=$(CV) -pedantic -D$(OS)
 
+SSL_LIB=
+SSL_LIB_DIR=
+ifneq (,$(wildcard /usr/local/opt/openssl/lib/libssl.a))
+	SSL_LIB_DIR=-L/usr/local/opt/openssl/lib
+	SSL_LIB=-lssl -lcrypto
+else ifneq (,$(wildcard /usr/local/openssl/lib/libssl.a))
+	SSL_LIB_DIR=-L/usr/local/openssl/lib
+	SSL_LIB=-lssl -lcrypto
+endif
+
+
 SRC_DIR=.
-LIB_DIRS=-L../../lib
+LIB_DIRS=-L../../lib $(SSL_LIB_DIR)
 INC_DIRS=-I../../include
+
 SRCS=$(shell find $(SRC_DIR) -type f -name "*.c" -print)
-LIBS=-lagoo -lpthread -lm
+LIBS=-lagoo $(SSL_LIB) -lpthread -lm
 OBJS=$(SRCS:.c=.o)
 TARGET=simple
 

@@ -24,7 +24,7 @@ cp ../agoo/ext/agoo/gqlsub.[ch] src/agoo
 cp ../agoo/ext/agoo/gqlvalue.[ch] src/agoo
 cp ../agoo/ext/agoo/hook.[ch] src/agoo
 cp ../agoo/ext/agoo/http.[ch] src/agoo
-cp ../agoo/ext/agoo/kinds.h src/agoo
+cp ../agoo/ext/agoo/kinds.[ch] src/agoo
 cp ../agoo/ext/agoo/log.[ch] src/agoo
 cp ../agoo/ext/agoo/method.h src/agoo
 cp ../agoo/ext/agoo/page.[ch] src/agoo

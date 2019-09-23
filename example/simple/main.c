@@ -11,6 +11,8 @@
 
 static agooText	emptyResp = NULL;
 
+#define USE_SSL	1
+
 static void
 empty_handler(agooReq req) {
     if (NULL == emptyResp) {
@@ -45,10 +47,25 @@ main(int argc, char **argv) {
 	printf("Failed to set root. %s\n", err.msg);
 	return err.code;
     }
+#if USE_SSL
+    // Demonstrates the use of the URL binding in addition to using SSL.
+    if (AGOO_ERR_OK != agoo_server_ssl_init(&err, "ssl/cert.pem", "ssl/key.pem")) {
+	printf("Failed to setup SSL. %s\n", err.msg);
+	return err.code;
+    }
+    char	url[256];
+
+    sprintf(url, "https://127.0.0.1:%d", port);
+    if (AGOO_ERR_OK != agoo_bind_to_url(&err, url)) {
+	printf("Failed to bind to port %d. %s\n", port, err.msg);
+	return err.code;
+    }
+#else
     if (AGOO_ERR_OK != agoo_bind_to_port(&err, port)) {
 	printf("Failed to bind to port %d. %s\n", port, err.msg);
 	return err.code;
     }
+#endif
     // set up hooks or routes
     if (AGOO_ERR_OK != agoo_add_func_hook(&err, AGOO_GET, "/empty", empty_handler, true) ||
 	AGOO_ERR_OK != agoo_add_func_hook(&err, AGOO_GET, "/user/*", user_handler, true) ||
