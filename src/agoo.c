@@ -265,7 +265,7 @@ eval_loop(void *ptr) {
 		bad_request(req, 404, __LINE__, NULL);
 		break;
 	    }
-	    //agoo_queue_wakeup(&agoo_server.con_queue);
+	    agoo_queue_wakeup(&agoo_server.con_queue);
 	    agoo_req_destroy(req);
 	}
     }
