@@ -11,7 +11,7 @@
 #include "agoo/text.h"
 #include "agoo/gqleval.h"
 
-#define AGOO_VERSION	"0.7.0"
+#define AGOO_VERSION	"0.7.1"
 
 struct _agooCon;
 
@@ -39,5 +39,6 @@ extern int	agoo_setup_graphql(agooErr err, const char *path, ...);
 
 extern gqlRef	agoo_query_object;
 extern gqlRef	agoo_mutation_object;
+extern double	agoo_poll_wait;
 
 #endif // AGOO_H

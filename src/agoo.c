@@ -21,6 +21,8 @@
 
 static volatile bool	running = true;
 
+double	agoo_poll_wait = 0.01;
+
 static void
 sig_handler(int sig) {
     running = false;
@@ -250,7 +252,7 @@ eval_loop(void *ptr) {
 
     atomic_fetch_add(&agoo_server.running, 1);
     while (agoo_server.active) {
-	if (NULL != (req = (agooReq)agoo_queue_pop(&agoo_server.eval_queue, 0.01))) {
+	if (NULL != (req = (agooReq)agoo_queue_pop(&agoo_server.eval_queue, agoo_poll_wait))) {
 	    if (NULL == req->hook) {
 		bad_request(req, 404, __LINE__, NULL);
 		continue;
@@ -263,7 +265,7 @@ eval_loop(void *ptr) {
 		bad_request(req, 404, __LINE__, NULL);
 		break;
 	    }
-	    agoo_queue_wakeup(&agoo_server.con_queue);
+	    //agoo_queue_wakeup(&agoo_server.con_queue);
 	    agoo_req_destroy(req);
 	}
     }
