@@ -5,8 +5,8 @@ CFLAGS=-c -Wall -O3 -std=$(CV) -pedantic -D$(OS)
 #CFLAGS=-c -Wall -g -Og -std=$(CV) -pedantic -D$(OS)
 
 SRC_DIR=.
-LIB_DIRS=-L../../lib
-INC_DIRS=-I../../include
+LIB_DIRS=-L../../../lib
+INC_DIRS=-I../../../include
 SRCS=$(shell find $(SRC_DIR) -type f -name "*.c" -print)
 LIBS=-lagoo -lpthread -lm
 OBJS=$(SRCS:.c=.o)
