@@ -8,6 +8,7 @@
 #include "agoo.h"
 #include "agoo/bind.h"
 #include "agoo/con.h"
+#include "agoo/debug.h"
 #include "agoo/dtime.h"
 #include "agoo/gqlintro.h"
 #include "agoo/gqlvalue.h"
@@ -223,10 +224,38 @@ agoo_setup_graphql(agooErr err, const char *path, ...) {
 	    mutation = f->type;
 	}
     }
-
-    // TBD if no query or mutation setup then add
-
     return AGOO_ERR_OK;
+}
+
+int
+agoo_load_graphql(agooErr err, const char *path, const char *filename) {
+    FILE	*f = fopen(filename, "r");
+    long	size;
+    char	*sdl;
+
+    if (NULL == f) {
+	return agoo_err_no(err, "Failed to open %s.", filename);
+    }
+    if (0 != fseek(f, 0, SEEK_END)) {
+	return agoo_err_no(err, "Failed to seek %s.", filename);
+    }
+    if (0 > (size = ftell(f))) {
+	return agoo_err_no(err, "Failed to ftell %s.", filename);
+    }
+    rewind(f);
+    if (0 < size) {
+	if (NULL == (sdl = AGOO_MALLOC(size))) {
+	    return AGOO_ERR_MEM(err, "SDL");
+	}
+	if (size != (long)fread(sdl, 1, size, f)) {
+	    return agoo_err_set(err, AGOO_ERR_READ, "Failed to read %s.", filename);
+	}
+    } else {
+	return agoo_err_set(err, AGOO_ERR_READ, "Empty file %s.", filename);
+    }
+    fclose(f);
+
+    return agoo_setup_graphql(err, path, sdl, NULL);
 }
 
 static void

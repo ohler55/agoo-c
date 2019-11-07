@@ -36,6 +36,7 @@ extern void	agoo_shutdown(void (*stop)());
 
 extern agooText	agoo_respond(int status, const char *body, int blen, agooKeyVal headers);
 extern int	agoo_setup_graphql(agooErr err, const char *path, ...);
+extern int	agoo_load_graphql(agooErr err, const char *path, const char *filename);
 
 extern gqlRef	agoo_query_object;
 extern gqlRef	agoo_mutation_object;

@@ -1646,6 +1646,7 @@ gql_dump_hook(agooReq req) {
     int		vlen;
     const char	*s = agoo_req_query_value(req, "all", 3, &vlen);
 
+    printf("*** gql_dump_hook\n");
     if (NULL != s && 4 == vlen && 0 == strncasecmp("true", s, 4)) {
 	all = true;
     }

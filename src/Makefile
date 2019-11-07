@@ -8,6 +8,7 @@ else
 endif
 
 SSL_INC=
+ifeq ($(SSL),true)
 ifneq (,$(wildcard /usr/local/opt/openssl/include/openssl/ssl.h))
 	SSL_INC=-I/usr/local/opt/openssl/include
 	CFLAGS+= -DHAVE_OPENSSL_SSL_H
@@ -15,6 +16,8 @@ else ifneq (,$(wildcard /usr/local/openssl/include/openssl/ssl.h))
 	SSL_INC=-I/usr/local/openssl/include
 	CFLAGS= -DHAVE_OPENSSL_SSL_H
 endif
+endif
+
 
 SRC_DIR=.
 INC_DIR=../include
@@ -25,7 +28,6 @@ SRCS=$(wildcard agoo/*.c) $(wildcard *.c)
 HEADERS=$(wildcard agoo/*.h) $(wildcard *.h)
 
 OBJS=$(SRCS:.c=.o)
-LIBS=-lm -lpthread -ssl
 TARGET=$(LIB_DIR)/libagoo.a
 
 all: $(INC_DIR) $(LIB_DIR) $(TARGET)

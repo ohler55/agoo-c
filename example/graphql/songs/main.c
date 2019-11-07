@@ -13,20 +13,7 @@
 #include <agoo/sdl.h>
 #include <agoo/server.h>
 
-// Start the app and then use curl or a browser to access this URL.
-//
-// http://localhost:6464/graphql?query={hello}
-
 static agooText		emptyResp = NULL;
-
-static const char	*sdl = "\n\
-type Query {\n\
-  hello(name: String!): String\n\
-}\n\
-type Mutation {\n\
-  \"Double the number provided.\"\n\
-  double(number: Int!): Int\n\
-}\n";
 
 static void
 empty_handler(agooReq req) {
@@ -116,22 +103,13 @@ main(int argc, char **argv) {
     struct _agooErr	err = AGOO_ERR_INIT;
     int			port = 6464;
 
-    if (AGOO_ERR_OK != agoo_init(&err, "hello")) {
-	printf("Failed to initialize Agoo. %s\n", err.msg);
+    if (AGOO_ERR_OK != agoo_init(&err, "songs") ||
+	AGOO_ERR_OK != agoo_pages_set_root(&err, ".") ||
+	AGOO_ERR_OK != agoo_bind_to_port(&err, port)) {
+	printf("Failed to initialize, set root, or bind to port %d. %s\n", port, err.msg);
 	return err.code;
     }
-    // Set the number of eval threads.
-    agoo_server.thread_cnt = 1;
-
-    if (AGOO_ERR_OK != agoo_pages_set_root(&err, ".")) {
-	printf("Failed to set root. %s\n", err.msg);
-	return err.code;
-    }
-    if (AGOO_ERR_OK != agoo_bind_to_port(&err, port)) {
-	printf("Failed to bind to port %d. %s\n", port, err.msg);
-	return err.code;
-    }
-    if (AGOO_ERR_OK != agoo_setup_graphql(&err, "/graphql", sdl, NULL)) {
+    if (AGOO_ERR_OK != agoo_load_graphql(&err, "/graphql", "song.graphql")) {
 	return err.code;
     }
     agoo_query_object = &query_obj;
@@ -140,6 +118,21 @@ main(int argc, char **argv) {
     // set up hooks or routes
     if (AGOO_ERR_OK != agoo_add_func_hook(&err, AGOO_GET, "/", empty_handler, true)) {
 	return err.code;
+    }
+    // Set the number of eval threads.
+    // TBD should this depend on number of threads?
+    agoo_server.thread_cnt = 1;
+
+    if (true) { // TBD -v flag
+	agoo_error_cat.on = true;
+	agoo_warn_cat.on = true;
+	agoo_info_cat.on = true;
+	agoo_debug_cat.on = true;
+	agoo_con_cat.on = true;
+	agoo_req_cat.on = true;
+	agoo_resp_cat.on = true;
+	agoo_eval_cat.on = true;
+	agoo_push_cat.on = true;
     }
     // start the server and wait for it to be shutdown
     if (AGOO_ERR_OK != agoo_start(&err, AGOO_VERSION)) {
