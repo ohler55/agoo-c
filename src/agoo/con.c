@@ -382,7 +382,6 @@ con_header_read(agooCon c, size_t *mlenp) {
 	char		root_buf[20148];
 	const char	*root = NULL;
 
-	printf("*** GET %s\n", path.start);
 	if (NULL != (p = agoo_group_get(&err, path.start, (int)(path.end - path.start)))) {
 	    if (page_response(c, p, hend)) {
 		return bad_request(c, 500, __LINE__);

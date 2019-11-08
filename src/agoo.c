@@ -85,16 +85,12 @@ gqlRef	agoo_mutation_object = NULL;
 
 static int
 schema_query(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
-    struct _gqlCobj	child = { .clas = ((gqlCobj)agoo_query_object)->clas, .ptr = NULL };
-
-    return gql_eval_sels(err, doc, (gqlRef)&child, field, sel->sels, result, depth + 1);
+    return gql_eval_sels(err, doc, (gqlRef)agoo_query_object, field, sel->sels, result, depth + 1);
 }
 
 static int
 schema_mutation(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
-    struct _gqlCobj	child = { .clas = ((gqlCobj)agoo_mutation_object)->clas, .ptr = NULL };
-
-    return gql_eval_sels(err, doc, (gqlRef)&child, field, sel->sels, result, depth + 1);
+    return gql_eval_sels(err, doc, (gqlRef)agoo_mutation_object, field, sel->sels, result, depth + 1);
 }
 
 static struct _gqlCmethod	schema_methods[] = {

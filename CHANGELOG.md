@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.7.2] - 2019-11-07
+
+Benchmarks
+
+### Added
+
+- agoo_load_graphql() to load SDL from a file.
+
 ## [0.7.0] - 2019-09-23
 
 TLS (SSL) support

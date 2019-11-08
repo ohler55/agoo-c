@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <agoo.h>
 #include <agoo/gqlintro.h>
@@ -24,35 +25,291 @@ empty_handler(agooReq req) {
     agoo_res_message_push(req->res, emptyResp);
 }
 
-///// Query type setup
+typedef struct _artist	*Artist;
+
+typedef struct _date {
+    int	year;
+    int	month;
+    int	day;
+} *Date;
+
+// type Song {
+//   name: String!
+//   artist: Artist
+//   duration: Int
+//   release: Date
+//   likes: Int
+// }
+typedef struct _song {
+    const char		*name;
+    Artist		artist;
+    int32_t		duration;
+    atomic_int		likes;
+    struct _date	release;
+} *Song;
+
+// type Artist {
+//   name: String!
+//   songs: [Song]
+//   origin: [String]
+// }
+struct _artist {
+    const char	*name;
+    Song	songs;    // NULL name terminated array
+    const char	**origin; // NULL terminated array
+};
+
+// type Query {
+//   artist(name: String!): Artist
+//   artists: [Artist]
+// }
+typedef struct _query {
+    struct _artist	*artists;
+} *Query;
+
+typedef struct _mutation {
+    Query	q;
+} *Mutation;
+
+static const char	*morningside[] = {"Morningside", "Auckland", "New Zealand", NULL};
+static struct _song	fazerdaze_songs[] = {
+    {.name = "Jennifer", .artist = NULL , .duration = 240, .release = {2017, 5, 5}},
+    {.name = "Lucky Girl", .artist = NULL, .duration = 170, .release = {2017, 5, 5}},
+    {.name = "Friends", .artist = NULL, .duration = 194, .release = {2017, 5, 5}},
+    {.name = "Reel", .artist = NULL, .duration = 193, .release = {2015, 11, 2}},
+    {.name = NULL },
+};
+
+static const char	*stockholm[] = {"Stockholm", "Sweden", NULL};
+static struct _song	boys_songs[] = {
+    {.name = "Down In The Basement", .artist = NULL, .duration = 216, .release = {2018, 9, 28}},
+    {.name = "Frogstrap", .artist = NULL, .duration = 195, .release = {2018, 9, 28}},
+    {.name = "Worms", .artist = NULL, .duration = 208, .release = {2018, 9, 28}},
+    {.name = "Amphetanarchy", .artist = NULL, .duration = 346, .release = {2018, 9, 28}},
+    {.name = NULL },
+};
+
+static struct _artist	artists[] = {
+    {.name = "Fazerdaze", .origin = morningside, .songs = fazerdaze_songs},
+    {.name = "Viagra Boys", .origin = stockholm, .songs = boys_songs},
+    {.name = NULL },
+};
+
+static struct _query	data = {
+    .artists = artists,
+};
+
+static struct _mutation	moo = {
+    .q = &data,
+};
+
+///// C hookups
+
+static struct _gqlCclass	artist_class;
 
 static int
-query_hello(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
-    const char	*key = sel->name;
-    char	hello[1024];
-    int		len;
+song_name(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Song	s = (Song)obj->ptr;
+    const char	*key = (NULL == sel->alias) ? sel->name : sel->alias;
+
+    return gql_object_set(err, result, key, gql_string_create(err, s->name, -1));
+}
+
+static int
+song_artist(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Song	s = (Song)obj->ptr;
+    const char	*key = (NULL == sel->alias) ? sel->name : sel->alias;
+
+    if (NULL == s->artist) {
+	return gql_object_set(err, result, key, gql_null_create(err));
+    }
+    struct _gqlCobj	child = { .clas = &artist_class };
+    gqlValue		co;
+
+    if (NULL == (co = gql_object_create(err)) ||
+	AGOO_ERR_OK != gql_object_set(err, result, key, co)) {
+	return err->code;
+    }
+    child.ptr = (void*)s->artist;
+
+    return gql_eval_sels(err, doc, (gqlRef)&child, field, sel->sels, co, depth + 1);
+}
+
+static int
+song_duration(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Song	s = (Song)obj->ptr;
+    const char	*key = (NULL == sel->alias) ? sel->name : sel->alias;
+
+    return gql_object_set(err, result, key, gql_int_create(err, s->duration));
+}
+
+static int
+song_likes(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Song	s = (Song)obj->ptr;
+    const char	*key = (NULL == sel->alias) ? sel->name : sel->alias;
+    int32_t	likes = (int32_t)(int64_t)atomic_load(&s->likes);
+
+    return gql_object_set(err, result, key, gql_int_create(err, likes));
+}
+
+static int
+song_release(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Song	s = (Song)obj->ptr;
+    const char	*key = (NULL == sel->alias) ? sel->name : sel->alias;
+    char	date[16];
+    int		len = snprintf(date, sizeof(date), "%04d-%02d-%02d", s->release.year, s->release.month, s->release.day);
+
+    return gql_object_set(err, result, key, gql_string_create(err, date, len));
+}
+
+static struct _gqlCmethod	song_methods[] = {
+    { .key = "name",      .func = song_name },
+    { .key = "artist",   .func = song_artist },
+    { .key = "duration", .func = song_duration },
+    { .key = "release",  .func = song_release },
+    { .key = "likes",    .func = song_likes },
+    { .key = NULL,       .func = NULL },
+};
+
+static struct _gqlCclass	song_class = {
+    .name = "Song",
+    .methods = song_methods,
+};
+
+static int
+artist_name(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Artist	a = (Artist)obj->ptr;
+    const char	*key = (NULL == sel->alias) ? sel->name : sel->alias;
+
+    return gql_object_set(err, result, key, gql_string_create(err, a->name, -1));
+}
+
+static int
+artist_songs(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Artist		a = (Artist)obj->ptr;
+    const char		*key = (NULL == sel->alias) ? sel->name : sel->alias;
+    gqlValue		list = gql_list_create(err, NULL);
+    gqlValue		co;
+    struct _gqlField	cf;
+    struct _gqlCobj	child = { .clas = &song_class };
+    int			d2 = depth + 1;
+
+    if (NULL == list ||
+	AGOO_ERR_OK != gql_object_set(err, result, key, list)) {
+	return err->code;
+    }
+    memset(&cf, 0, sizeof(cf));
+    cf.type = sel->type->base;
+
+    for (Song s = a->songs; NULL != s->name; s++) {
+	if (NULL == (co = gql_object_create(err)) ||
+	    AGOO_ERR_OK != gql_list_append(err, list, co)) {
+	    return err->code;
+	}
+	child.ptr = s;
+	if (AGOO_ERR_OK != gql_eval_sels(err, doc, (gqlRef)&child, &cf, sel->sels, co, d2)) {
+	    return err->code;
+	}
+    }
+    return AGOO_ERR_OK;
+}
+
+static int
+artist_origin(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Artist	a = (Artist)obj->ptr;
+    const char	*key = (NULL == sel->alias) ? sel->name : sel->alias;
+    gqlValue	list = gql_list_create(err, NULL);
     gqlValue	val;
+
+    for (const char **s = a->origin; NULL != *s; s++) {
+	if (NULL == (val = gql_string_create(err, *s, -1)) ||
+	    AGOO_ERR_OK != gql_list_append(err, list, val)) {
+	    return err->code;
+	}
+    }
+    return gql_object_set(err, result, key, list);
+}
+
+static struct _gqlCmethod	artist_methods[] = {
+    { .key = "name",   .func = artist_name },
+    { .key = "songs",  .func = artist_songs },
+    { .key = "origin", .func = artist_origin },
+    { .key = NULL,     .func = NULL },
+};
+
+static struct _gqlCclass	artist_class = {
+    .name = "Artist",
+    .methods = artist_methods,
+};
+
+static int
+query_artist(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Query	q = (Query)obj->ptr;
+    const char	*key = (NULL == sel->alias) ? sel->name : sel->alias;
     gqlValue	nv = gql_extract_arg(err, field, sel, "name");
     const char	*name = NULL;
 
     if (NULL != nv) {
 	name = gql_string_get(nv);
     }
-    if (NULL == name) {
-	name = "";
-    }
-    len = snprintf(hello, sizeof(hello), "Hello %s", name);
-    val = gql_string_create(err, hello, len);
+    Artist	a = NULL;
 
-    if (NULL != sel->alias) {
-	key = sel->alias;
+    if (NULL != name) {
+	for (a = q->artists; NULL != a; a++) {
+	    if (0 == strcmp(a->name, name)) {
+		break;
+	    }
+	}
     }
-    return gql_object_set(err, result, key, val);
+    if (NULL == a) {
+	return gql_object_set(err, result, key, gql_null_create(err));
+    }
+    struct _gqlCobj	child = { .clas = &artist_class };
+    gqlValue		co;
+
+    if (NULL == (co = gql_object_create(err)) ||
+	AGOO_ERR_OK != gql_object_set(err, result, key, co)) {
+	return err->code;
+    }
+    child.ptr = (void*)a;
+
+    return gql_eval_sels(err, doc, (gqlRef)&child, field, sel->sels, co, depth + 1);
+}
+
+static int
+query_artists(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Query		q = (Query)obj->ptr;
+    const char		*key = (NULL == sel->alias) ? sel->name : sel->alias;
+    gqlValue		list = gql_list_create(err, NULL);
+    gqlValue		co;
+    struct _gqlField	cf;
+    struct _gqlCobj	child = { .clas = &artist_class };
+    int			d2 = depth + 1;
+
+    if (NULL == list ||
+	AGOO_ERR_OK != gql_object_set(err, result, key, list)) {
+	return err->code;
+    }
+    memset(&cf, 0, sizeof(cf));
+    cf.type = sel->type->base;
+
+    for (Artist a = q->artists; NULL != a->name; a++) {
+	if (NULL == (co = gql_object_create(err)) ||
+	    AGOO_ERR_OK != gql_list_append(err, list, co)) {
+	    return err->code;
+	}
+	child.ptr = a;
+	if (AGOO_ERR_OK != gql_eval_sels(err, doc, (gqlRef)&child, &cf, sel->sels, co, d2)) {
+	    return err->code;
+	}
+    }
+    return AGOO_ERR_OK;
 }
 
 static struct _gqlCmethod	query_methods[] = {
-    { .key = "hello", .func = query_hello },
-    { .key = NULL,    .func = NULL },
+    { .key = "artist",  .func = query_artist },
+    { .key = "artists", .func = query_artists },
+    { .key = NULL,      .func = NULL },
 };
 
 static struct _gqlCclass	query_class = {
@@ -62,29 +319,53 @@ static struct _gqlCclass	query_class = {
 
 static struct _gqlCobj	query_obj = {
     .clas = &query_class,
-    .ptr = NULL,
+    .ptr = &data,
 };
+
 
 ///// Mutation type setup
 
 static int
-mutation_double(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+mutation_like(agooErr err, gqlDoc doc, gqlCobj obj, gqlField field, gqlSel sel, gqlValue result, int depth) {
+    Mutation	m = (Mutation)obj->ptr;
     const char	*key = sel->name;
-    gqlValue	nv = gql_extract_arg(err, field, sel, "number");
-    gqlValue	val;
+    gqlValue	nv;
+    const char	*artist = NULL;
+    const char	*song = NULL;
+    Song	found = NULL;
 
-    if (NULL == nv || &gql_int_type != nv->type) {
-	return agoo_err_set(err, AGOO_ERR_EVAL, "number must be an Int.");
+    if (NULL != (nv = gql_extract_arg(err, field, sel, "artist"))) {
+	artist = gql_string_get(nv);
     }
-    val = gql_int_create(err, nv->i * 2);
-    if (NULL != sel->alias) {
-	key = sel->alias;
+    if (NULL != (nv = gql_extract_arg(err, field, sel, "song"))) {
+	song = gql_string_get(nv);
     }
-    return gql_object_set(err, result, key, val);
+    for (Artist a = m->q->artists; NULL != a->name; a++) {
+	if (0 == strcmp(a->name, artist)) {
+	    for (found = a->songs; NULL != found->name; found++) {
+		if (0 == strcmp(found->name, song)) {
+		    atomic_fetch_add(&found->likes, 1);
+		    break;
+		}
+	    }
+	    break;
+	}
+    }
+    if (NULL == found) {
+	return gql_object_set(err, result, key, gql_null_create(err));
+    }
+    struct _gqlCobj	child = { .clas = &song_class, .ptr = (void*)found };
+    gqlValue		co;
+
+    if (NULL == (co = gql_object_create(err)) ||
+	AGOO_ERR_OK != gql_object_set(err, result, key, co)) {
+	return err->code;
+    }
+    return gql_eval_sels(err, doc, (gqlRef)&child, field, sel->sels, co, depth + 1);
 }
 
 static struct _gqlCmethod	mutation_methods[] = {
-    { .key = "double", .func = mutation_double },
+    { .key = "like", .func = mutation_like },
     { .key = NULL,     .func = NULL },
 };
 
@@ -95,7 +376,7 @@ static struct _gqlCclass	mutation_class = {
 
 static struct _gqlCobj	mutation_obj = {
     .clas = &mutation_class,
-    .ptr = NULL,
+    .ptr = &moo,
 };
 
 int
@@ -103,6 +384,12 @@ main(int argc, char **argv) {
     struct _agooErr	err = AGOO_ERR_INIT;
     int			port = 6464;
 
+    // Setup the artist links in the song data.
+    for (Artist a = data.artists; NULL != a->name; a++) {
+	for (Song s = a->songs; NULL != s->name; s++) {
+	    s->artist = a;
+	}
+    }
     if (AGOO_ERR_OK != agoo_init(&err, "songs") ||
 	AGOO_ERR_OK != agoo_pages_set_root(&err, ".") ||
 	AGOO_ERR_OK != agoo_bind_to_port(&err, port)) {
@@ -119,21 +406,8 @@ main(int argc, char **argv) {
     if (AGOO_ERR_OK != agoo_add_func_hook(&err, AGOO_GET, "/", empty_handler, true)) {
 	return err.code;
     }
-    // Set the number of eval threads.
-    // TBD should this depend on number of threads?
-    agoo_server.thread_cnt = 1;
+    agoo_server.thread_cnt = sysconf(_SC_NPROCESSORS_ONLN);
 
-    if (true) { // TBD -v flag
-	agoo_error_cat.on = true;
-	agoo_warn_cat.on = true;
-	agoo_info_cat.on = true;
-	agoo_debug_cat.on = true;
-	agoo_con_cat.on = true;
-	agoo_req_cat.on = true;
-	agoo_resp_cat.on = true;
-	agoo_eval_cat.on = true;
-	agoo_push_cat.on = true;
-    }
     // start the server and wait for it to be shutdown
     if (AGOO_ERR_OK != agoo_start(&err, AGOO_VERSION)) {
 	printf("%s\n", err.msg);
