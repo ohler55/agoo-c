@@ -382,7 +382,7 @@ static struct _gqlCobj	mutation_obj = {
 int
 main(int argc, char **argv) {
     struct _agooErr	err = AGOO_ERR_INIT;
-    int			port = 6464;
+    int			port = 3000;
 
     // Setup the artist links in the song data.
     for (Artist a = data.artists; NULL != a->name; a++) {
@@ -407,7 +407,17 @@ main(int argc, char **argv) {
 	return err.code;
     }
     agoo_server.thread_cnt = sysconf(_SC_NPROCESSORS_ONLN);
-
+    if (false) {
+	agoo_error_cat.on = true;
+	agoo_warn_cat.on = true;
+	agoo_info_cat.on = true;
+	agoo_debug_cat.on = true;
+	agoo_con_cat.on = true;
+	agoo_req_cat.on = true;
+	agoo_resp_cat.on = true;
+	agoo_eval_cat.on = true;
+	agoo_push_cat.on = true;
+    }
     // start the server and wait for it to be shutdown
     if (AGOO_ERR_OK != agoo_start(&err, AGOO_VERSION)) {
 	printf("%s\n", err.msg);
