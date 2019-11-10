@@ -11,7 +11,7 @@
 #include "agoo/text.h"
 #include "agoo/gqleval.h"
 
-#define AGOO_VERSION	"0.7.2"
+#define AGOO_VERSION	"0.7.3"
 
 struct _agooCon;
 
