@@ -233,20 +233,27 @@ agoo_load_graphql(agooErr err, const char *path, const char *filename) {
 	return agoo_err_no(err, "Failed to open %s.", filename);
     }
     if (0 != fseek(f, 0, SEEK_END)) {
+      fclose(f);
 	return agoo_err_no(err, "Failed to seek %s.", filename);
     }
     if (0 > (size = ftell(f))) {
+      fclose(f);
 	return agoo_err_no(err, "Failed to ftell %s.", filename);
     }
     rewind(f);
     if (0 < size) {
 	if (NULL == (sdl = AGOO_MALLOC(size))) {
+    fclose(f);
+    free(sdl);
 	    return AGOO_ERR_MEM(err, "SDL");
 	}
 	if (size != (long)fread(sdl, 1, size, f)) {
+    fclose(f);
+    free(sdl);
 	    return agoo_err_set(err, AGOO_ERR_READ, "Failed to read %s.", filename);
 	}
     } else {
+      fclose(f);
 	return agoo_err_set(err, AGOO_ERR_READ, "Empty file %s.", filename);
     }
     fclose(f);
@@ -360,7 +367,7 @@ agoo_respond(int status, const char *body, int blen, agooKeyVal headers) {
 	exit(AGOO_ERR_MEMORY);
 	return NULL;
     }
-    t->len = snprintf(t->text, 256, "HTTP/1.1 %d %s\r\nContent-Length: %u\r\n", status, agoo_http_code_message(status), blen);
+    t->len = snprintf(t->text, 256, "HTTP/1.1 %d %s\r\nContent-Length: %d\r\n", status, agoo_http_code_message(status), blen);
     if (NULL != headers) {
 	for (h = headers; NULL != h->key; h++) {
 	    t = agoo_text_append(t, h->key, -1);
