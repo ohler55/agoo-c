@@ -244,7 +244,6 @@ agoo_load_graphql(agooErr err, const char *path, const char *filename) {
     if (0 < size) {
 	if (NULL == (sdl = AGOO_MALLOC(size))) {
     fclose(f);
-    free(sdl);
 	    return AGOO_ERR_MEM(err, "SDL");
 	}
 	if (size != (long)fread(sdl, 1, size, f)) {
