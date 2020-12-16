@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://www.w3.org/2000/svg" viewBox="340.5 300.5 281.1995 131.5" width="281.1995" height="131.5">
+  <defs/>
+  <metadata> Produced by OmniGraffle 7.18.1\n2020-12-12 17:15:25 +0000</metadata>
+  <g id="Canvas_1" stroke-opacity="1" fill="none" fill-opacity="1" stroke-dasharray="none" stroke="none">
+    <title>Canvas 1</title>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Group_23">
+        <g id="Line_30">
+          <path d="M 445 306.5 C 485 308 523.45917 320.52804 565 358.5" stroke="#005493" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"/>
+        </g>
+        <g id="Line_29">
+          <path d="M 444.7343 306.5 C 473.5 324 474 344.54194 533.5 365.54194" stroke="#005493" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"/>
+        </g>
+        <g id="Line_28">
+          <path d="M 393 429 C 427 345.5 553.5 333 602 354.5" stroke="#005493" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"/>
+        </g>
+        <g id="Line_27">
+          <path d="M 343.5 411 C 494.5 322.5 663 422.5 608.0733 359" stroke="#005493" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"/>
+        </g>
+        <g id="Line_26">
+          <path d="M 533.5 303.5 C 548 312 558.5528 322.40092 564.0215 345.90046" stroke="#005493" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"/>
+        </g>
+        <g id="Line_25">
+          <path d="M 533.5 303.5 C 531 310.5 528.5 309.5 529.0982 331.27382" stroke="#005493" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"/>
+        </g>
+        <g id="Graphic_24">
+          <circle cx="592" cy="365" r="6.00000958741141" fill="white"/>
+          <circle cx="592" cy="365" r="6.00000958741141" stroke="#005493" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

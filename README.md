@@ -1,4 +1,4 @@
-# Agoo-C
+# [![{}j](misc/agoo_128.svg)](http://www.ohler.com/agoo) Agoo-C
 
 Agoo webserver and GraphQL server in C with the goal of being the best
 performing webserver and GraphQL server across all languages. So far
